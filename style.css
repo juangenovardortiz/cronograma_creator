@@ -727,6 +727,32 @@ canvas {
     gap: 10px;
 }
 
+.task-style-picker {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.task-style-option {
+    background: transparent;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    padding: 4px 6px;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.task-style-option:hover {
+    border-color: var(--modal-border);
+    background-color: var(--header-bg);
+}
+
+.task-style-option.active {
+    border-color: var(--modal-border);
+    background-color: var(--header-bg);
+    box-shadow: 0 0 0 1px var(--modal-border);
+}
+
 .modal-row {
     display: flex;
     gap: 20px;

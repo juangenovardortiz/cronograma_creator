@@ -76,7 +76,9 @@ const translations = {
         editTaskTitle: "Editar Tarea", taskNameLabel: "Tarea:", taskStartLabel: "Semana Inicio:",
         taskDurationLabel: "Duración (semanas):", taskTypeLabel: "Tipo:",
         taskTypeNormal: "Normal", taskTypeMilestone: "Hito", taskTextPositionLabel: "Posición Texto:",
-        taskTextInside: "Dentro", taskTextOutside: "Fuera", taskColorLabel: "Color Tarea:",
+        taskTextInside: "Dentro", taskTextOutside: "Fuera", taskStyleLabel: "Estilo:",
+        styleBarOutside: "Barra con texto fuera", styleBarInside: "Barra con texto dentro", styleMilestoneOutside: "Hito con texto fuera",
+        taskColorLabel: "Color Tarea:",
         deleteTaskBtn: "Eliminar Tarea", completeBtn: "Completada", uncompleteBtn: "Descompletar",
         editProjectTitle: "Editar Proyecto", projectNameLabel: "Nombre del Proyecto:",
         projectColorLabel: "Color Proyecto:", deleteProjectBtn: "Eliminar Proyecto",
@@ -91,7 +93,8 @@ const translations = {
         newScheduleTitle: "Nuevo Cronograma", saveScheduleTitle: "Guardar Cronograma",
         copyImageTitle: "Copiar como Imagen", exportExcelTitle: "Exportar a Excel",
         undoTitle: "Deshacer (Ctrl+Z)", redoTitle: "Rehacer (Ctrl+Y)", resetColorTitle: "Restaurar color del proyecto",
-        addTaskAction: "+ Añadir tarea", weekTooltipTo: " al ", acceptBtn: "Aceptar"
+        addTaskAction: "+ Añadir tarea", weekTooltipTo: " al ", acceptBtn: "Aceptar",
+        confirmChangeColor: "Esto cambiará el color de todas las tareas del proyecto. ¿Deseas continuar?"
     },
     en: {
         newBtn: "New", saveBtn: "Save", copyBtn: "Copy", excelBtn: "Export",
@@ -104,7 +107,9 @@ const translations = {
         editTaskTitle: "Edit Task", taskNameLabel: "Task Name:", taskStartLabel: "Start Week:",
         taskDurationLabel: "Duration (weeks):", taskTypeLabel: "Type:",
         taskTypeNormal: "Normal", taskTypeMilestone: "Milestone", taskTextPositionLabel: "Text Position:",
-        taskTextInside: "Inside", taskTextOutside: "Outside", taskColorLabel: "Task Color:",
+        taskTextInside: "Inside", taskTextOutside: "Outside", taskStyleLabel: "Style:",
+        styleBarOutside: "Bar with text outside", styleBarInside: "Bar with text inside", styleMilestoneOutside: "Milestone with text outside",
+        taskColorLabel: "Task Color:",
         deleteTaskBtn: "Delete Task", completeBtn: "Completed", uncompleteBtn: "Uncomplete",
         editProjectTitle: "Edit Project", projectNameLabel: "Project Name:",
         projectColorLabel: "Project Color:", deleteProjectBtn: "Delete Project",
@@ -119,7 +124,8 @@ const translations = {
         newScheduleTitle: "New Schedule", saveScheduleTitle: "Save Schedule",
         copyImageTitle: "Copy as Image", exportExcelTitle: "Export to Excel",
         undoTitle: "Undo (Ctrl+Z)", redoTitle: "Redo (Ctrl+Y)", resetColorTitle: "Reset project color",
-        addTaskAction: "+ Add task", weekTooltipTo: " to ", acceptBtn: "Accept"
+        addTaskAction: "+ Add task", weekTooltipTo: " to ", acceptBtn: "Accept",
+        confirmChangeColor: "This will change the color of all tasks in the project. Do you want to continue?"
     }
 };
 
@@ -881,7 +887,17 @@ function updateProjectFromModal() {
     if (!project) return;
 
     project.name = document.getElementById('modal-project-name').value.trim() || 'Proyecto sin nombre';
-    project.color = document.getElementById('modal-project-color').value;
+    const oldColor = project.color;
+    const newColor = document.getElementById('modal-project-color').value;
+    if (oldColor !== newColor) {
+        project.color = newColor;
+        // Limpiar color explícito de todas las tareas para que hereden el nuevo color
+        project.tasksByRow.forEach(row => {
+            row.forEach(task => {
+                delete task.color;
+            });
+        });
+    }
 
     updatePreview();
 }
@@ -898,6 +914,9 @@ function openTaskModal(projectIndex, rowIndex, taskIndex) {
     document.getElementById('modal-text-position').value = task.textPosition;
     document.getElementById('modal-task-color').value = task.color || projects[projectIndex].color;
     document.getElementById('modal-task-completed').checked = !!task.completed;
+
+    // Sincronizar botones gráficos de estilo
+    updateStylePickerSelection();
 
     const modal = document.getElementById('task-modal');
     modal.style.display = 'flex';
@@ -934,6 +953,24 @@ function openTaskModal(projectIndex, rowIndex, taskIndex) {
     });
 }
 
+function updateStylePickerSelection() {
+    const type = document.getElementById('modal-task-type').value;
+    const text = document.getElementById('modal-text-position').value;
+    document.querySelectorAll('.task-style-option').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === type && btn.dataset.text === text);
+    });
+}
+
+// Inicializar listeners de los botones de estilo
+document.querySelectorAll('.task-style-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.getElementById('modal-task-type').value = btn.dataset.type;
+        document.getElementById('modal-text-position').value = btn.dataset.text;
+        updateStylePickerSelection();
+        updateTaskFromModal();
+    });
+});
+
 function closeTaskModal() {
     document.getElementById('task-modal').style.display = 'none';
     editingTask = { project: -1, row: -1, task: -1 };
@@ -949,7 +986,7 @@ function updateTaskFromModal() {
         name: document.getElementById('modal-task-name').value.trim() || 'Tarea sin nombre',
         isMilestone: document.getElementById('modal-task-type').value === 'milestone',
         textPosition: document.getElementById('modal-text-position').value,
-        color: document.getElementById('modal-task-color').value,
+        color: document.getElementById('modal-task-color').value === projects[project].color ? undefined : document.getElementById('modal-task-color').value,
         completed: document.getElementById('modal-task-completed').checked
     };
 
@@ -1969,8 +2006,8 @@ function addSimpleTask(projectIndex) {
 
     const newTask = {
         name: getTranslation('newTaskDefault'),
-        startWeek: Math.ceil(latestEndWeek), // Empezar justo después
-        duration: 2, // Duración por defecto
+        startWeek: Math.min(Math.ceil(latestEndWeek), totalWeeks), // No pasar de la última semana visible
+        duration: 1, // Duración por defecto
         type: 'normal',
         textPosition: 'inside'
     };
