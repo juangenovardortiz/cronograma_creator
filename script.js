@@ -47,6 +47,23 @@ const taskFont = "14px Poppins";
 const projectIconSize = 18;
 const projectIconPadding = 20;
 
+function wrapText(ctx, text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = words[0] || '';
+    for (let i = 1; i < words.length; i++) {
+        const testLine = currentLine + ' ' + words[i];
+        if (ctx.measureText(testLine).width > maxWidth) {
+            lines.push(currentLine);
+            currentLine = words[i];
+        } else {
+            currentLine = testLine;
+        }
+    }
+    lines.push(currentLine);
+    return lines;
+}
+
 const translations = {
     es: {
         newBtn: "Nuevo", saveBtn: "Guardar", copyBtn: "Copiar", excelBtn: "Exportar",
@@ -1466,17 +1483,23 @@ function drawProjects() {
         // Dibujar siempre el nombre del proyecto y sus iconos
         const projectHeight = project.tasksByRow.length * rowHeight;
         const projectCenterY = y + projectHeight / 2;
-        const textMetrics = ctx.measureText(project.name);
         const textX = 20;
-
-        // Si no hay tareas, centrar el texto en el espacio de margen superior
-        const textY = (project.tasksByRow.length > 0) ? projectCenterY : y + (15 / 2);
+        const maxTextWidth = projectLabelWidth - textX - 10;
 
         ctx.fillStyle = project.color;
         ctx.font = projectFont;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText(project.name, textX, textY);
+
+        // Dividir el nombre en líneas si excede el ancho disponible
+        const lines = wrapText(ctx, project.name, maxTextWidth);
+        const lineHeight = 18;
+        // Si no hay tareas, centrar el texto en el espacio de margen superior
+        const baseCenterY = (project.tasksByRow.length > 0) ? projectCenterY : y + (15 / 2);
+        const textBlockTop = baseCenterY - (lines.length * lineHeight) / 2;
+        lines.forEach((line, i) => {
+            ctx.fillText(line, textX, textBlockTop + i * lineHeight + lineHeight / 2);
+        });
 
         const isDropTargetProject = draggingTask && draggingTask.didMove && draggingTask.dropTarget?.projectIndex === projectIndex;
         const dropRowIndex = isDropTargetProject ? draggingTask.dropTarget.rowIndex : -1;
@@ -1675,16 +1698,10 @@ function drawTaskBar(task, project, y, projectIndex, rowIndex, taskIndex) {
                 const textX = startX + fullBarWidth + 10;
                 if (textX + textMetrics.width > logicalCanvasWidth) {
                     ctx.textAlign = 'right';
-                    // Límite de 150px o espacio hasta el borde izquierdo del chart
-                    const maxLeftTextWidth = Math.min(150, startX - projectLabelWidth - 20);
-                    const finalLeftText = (textMetrics.width > maxLeftTextWidth) ? truncateText(ctx, text, maxLeftTextWidth) : text;
-                    ctx.fillText(finalLeftText, startX - 10, textY);
+                    ctx.fillText(text, startX - 10, textY);
                 } else {
                     ctx.textAlign = 'left';
-                    // Límite de 200px o espacio hasta el borde derecho del canvas
-                    const maxRightTextWidth = Math.min(200, logicalCanvasWidth - textX - 10);
-                    const finalRightText = (textMetrics.width > maxRightTextWidth) ? truncateText(ctx, text, maxRightTextWidth) : text;
-                    ctx.fillText(finalRightText, textX, textY);
+                    ctx.fillText(text, textX, textY);
                 }
             }
         }
@@ -1737,7 +1754,13 @@ function drawGhostProject() {
     ctx.font = projectFont;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(project.name, 20, ghostY + 10);
+    const ghostMaxWidth = projectLabelWidth - 30;
+    const ghostLines = wrapText(ctx, project.name, ghostMaxWidth);
+    const ghostLineHeight = 18;
+    const ghostBaseY = ghostY + 10 - (ghostLines.length - 1) * ghostLineHeight / 2;
+    ghostLines.forEach((line, i) => {
+        ctx.fillText(line, 20, ghostBaseY + i * ghostLineHeight);
+    });
 
     ctx.globalAlpha = 1.0;
 }
