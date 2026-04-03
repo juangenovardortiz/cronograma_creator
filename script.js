@@ -1638,7 +1638,8 @@ function draw() {
     const hCanvas = document.getElementById('ganttHeaderCanvas');
     if (hCanvas && hCanvas.width > 0) {
         const hCtx = hCanvas.getContext('2d');
-        hCtx.clearRect(0, 0, hCanvas.width, hCanvas.height);
+        hCtx.fillStyle = canvasHeaderBg;
+        hCtx.fillRect(0, 0, hCanvas.width, hCanvas.height);
         hCtx.drawImage(canvas, 0, 0, canvas.width, hCanvas.height, 0, 0, hCanvas.width, hCanvas.height);
     }
 }
