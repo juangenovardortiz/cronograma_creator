@@ -23,13 +23,14 @@ let addTaskHitboxes = []; // Hitboxes para los botones de 'Añadir Tarea'
 let isDrawingForExport = false; // Flag para el dibujado de exportación
 const resizeHandleWidth = 15; // Ancho del área de redimensión
 
-const colorPalette = ['#4A90E2', '#8E44AD', '#E67E22', '#27AE60', '#F1C40F', '#C0392B', '#16A085', '#2980B9'];
+const colorPalette = ['#5B8CC8', '#8A58B0', '#C97838', '#2E9E58', '#C8A028', '#B84848', '#2A9080', '#3A80B0'];
 let nextColorIndex = 0;
 
 let months = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
 let totalWeeks = 26; // Se calcula dinámicamente
 
 const rowHeight = 35;
+const compactRowHeight = 22;
 const headerHeight = 70;
 const projectLabelWidth = 200;
 let gridColor = '#444';
@@ -46,6 +47,12 @@ const projectFont = "bold 16px Poppins";
 const taskFont = "14px Poppins";
 const projectIconSize = 18;
 const projectIconPadding = 20;
+const compactTaskFont = "11px Poppins";
+
+function getRowHeight(row) {
+    if (!row || row.length === 0) return rowHeight;
+    return row.every(t => t.compact) ? compactRowHeight : rowHeight;
+}
 
 function wrapText(ctx, text, maxWidth) {
     const words = text.split(' ');
@@ -66,7 +73,7 @@ function wrapText(ctx, text, maxWidth) {
 
 const translations = {
     es: {
-        newBtn: "Nuevo", saveBtn: "Guardar", copyBtn: "Copiar", excelBtn: "Exportar",
+        newBtn: "Nuevo", saveBtn: "Guardar", copyBtn: "Imagen", excelBtn: "Exportar",
         undoBtn: "Deshacer", redoBtn: "Rehacer", scheduleLabel: "Cronograma:",
         schedulePlaceholder: "Título del Cronograma", startLabel: "Inicio:",
         endLabel: "Fin:", themeLabel: "Tema:", langLabel: "Idioma:",
@@ -78,13 +85,14 @@ const translations = {
         taskTypeNormal: "Normal", taskTypeMilestone: "Hito", taskTextPositionLabel: "Posición Texto:",
         taskTextInside: "Dentro", taskTextOutside: "Fuera", taskStyleLabel: "Estilo:",
         styleBarOutside: "Barra con texto fuera", styleBarInside: "Barra con texto dentro", styleMilestoneOutside: "Hito con texto fuera",
+        compactLabel: "Compacta", compactProjectLabel: "Compacto",
         taskColorLabel: "Color Tarea:",
         deleteTaskBtn: "Eliminar Tarea", completeBtn: "Completada", uncompleteBtn: "Descompletar",
-        editProjectTitle: "Editar Proyecto", projectNameLabel: "Nombre del Proyecto:",
-        projectColorLabel: "Color Proyecto:", deleteProjectBtn: "Eliminar Proyecto",
+        editProjectTitle: "Editar Proyecto", projectNameLabel: "Nombre:",
+        projectColorLabel: "Color:", deleteProjectBtn: "Eliminar Proyecto",
         months: ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"],
         weekPrefix: "S", newProjectDefault: "Nuevo Proyecto", newTaskDefault: "Nueva Tarea",
-        copying: "Copiando...", copied: "¡Copiado!",
+        copying: "Copiando...", copied: "✅ Imagen copiada al portapapeles",
         confirmDeleteProject: "¿Estás seguro de que deseas eliminar este proyecto y todas sus tareas?",
         confirmDeleteTask: "¿Estás seguro de que deseas eliminar esta tarea?",
         confirmImport: "Se han detectado {0} tareas para importar. ¿Quieres añadirlas al cronograma actual?\n\nLas tareas existentes no se eliminarán.",
@@ -93,11 +101,13 @@ const translations = {
         newScheduleTitle: "Nuevo Cronograma", saveScheduleTitle: "Guardar Cronograma",
         copyImageTitle: "Copiar como Imagen", exportExcelTitle: "Exportar a Excel",
         undoTitle: "Deshacer (Ctrl+Z)", redoTitle: "Rehacer (Ctrl+Y)", resetColorTitle: "Restaurar color del proyecto",
+        resetProjectColorTitle: "Restaurar color predeterminado del proyecto",
         addTaskAction: "+ Añadir tarea", weekTooltipTo: " al ", acceptBtn: "Aceptar",
-        confirmChangeColor: "Esto cambiará el color de todas las tareas del proyecto. ¿Deseas continuar?"
+        confirmChangeColor: "Esto cambiará el color de todas las tareas del proyecto. ¿Deseas continuar?",
+        shareBtn: "Compartir", shareBtnTitle: "Compartir enlace", sharePopupTitle: "Compartir enlace"
     },
     en: {
-        newBtn: "New", saveBtn: "Save", copyBtn: "Copy", excelBtn: "Export",
+        newBtn: "New", saveBtn: "Save", copyBtn: "Image", excelBtn: "Export",
         undoBtn: "Undo", redoBtn: "Redo", scheduleLabel: "Schedule:",
         schedulePlaceholder: "Schedule Title", startLabel: "Start:",
         endLabel: "End:", themeLabel: "Theme:", langLabel: "Language:",
@@ -109,13 +119,14 @@ const translations = {
         taskTypeNormal: "Normal", taskTypeMilestone: "Milestone", taskTextPositionLabel: "Text Position:",
         taskTextInside: "Inside", taskTextOutside: "Outside", taskStyleLabel: "Style:",
         styleBarOutside: "Bar with text outside", styleBarInside: "Bar with text inside", styleMilestoneOutside: "Milestone with text outside",
+        compactLabel: "Compact", compactProjectLabel: "Compact",
         taskColorLabel: "Task Color:",
         deleteTaskBtn: "Delete Task", completeBtn: "Completed", uncompleteBtn: "Uncomplete",
-        editProjectTitle: "Edit Project", projectNameLabel: "Project Name:",
-        projectColorLabel: "Project Color:", deleteProjectBtn: "Delete Project",
+        editProjectTitle: "Edit Project", projectNameLabel: "Name:",
+        projectColorLabel: "Color:", deleteProjectBtn: "Delete Project",
         months: ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"],
         weekPrefix: "W", newProjectDefault: "New Project", newTaskDefault: "New Task",
-        copying: "Copying...", copied: "Copied!",
+        copying: "Copying...", copied: "✅ Image copied to clipboard",
         confirmDeleteProject: "Are you sure you want to delete this project and all its tasks?",
         confirmDeleteTask: "Are you sure you want to delete this task?",
         confirmImport: "{0} tasks detected for import. Do you want to add them to the current schedule?\n\nExisting tasks will not be deleted.",
@@ -124,8 +135,10 @@ const translations = {
         newScheduleTitle: "New Schedule", saveScheduleTitle: "Save Schedule",
         copyImageTitle: "Copy as Image", exportExcelTitle: "Export to Excel",
         undoTitle: "Undo (Ctrl+Z)", redoTitle: "Redo (Ctrl+Y)", resetColorTitle: "Reset project color",
+        resetProjectColorTitle: "Restore project default color",
         addTaskAction: "+ Add task", weekTooltipTo: " to ", acceptBtn: "Accept",
-        confirmChangeColor: "This will change the color of all tasks in the project. Do you want to continue?"
+        confirmChangeColor: "This will change the color of all tasks in the project. Do you want to continue?",
+        shareBtn: "Share", shareBtnTitle: "Share link", sharePopupTitle: "Share link"
     }
 };
 
@@ -167,6 +180,12 @@ window.addEventListener('load', () => {
     canvas = document.getElementById('ganttCanvas');
     ctx = canvas.getContext('2d');
 
+    // Ajustar el top del header canvas sticky según la altura del top-bar
+    const topBar = document.querySelector('.top-bar');
+    if (topBar) {
+        document.getElementById('ganttHeaderCanvas').style.top = topBar.getBoundingClientRect().height + 'px';
+    }
+
     // Detectar el idioma del navegador y rellenar el dropdown
     const langSelector = document.getElementById('lang-selector');
     const browserLang = (navigator.language || navigator.userLanguage || "es").substring(0, 2).toLowerCase();
@@ -175,6 +194,7 @@ window.addEventListener('load', () => {
     // El orden correcto y único de inicialización
     populateMonthSelectors();
     loadStateFromLocalStorage();
+    loadFromShareUrl();
     applyLanguage(langSelector.value);
 
     document.getElementById('add-project-btn').addEventListener('click', addDefaultProject);
@@ -228,6 +248,39 @@ window.addEventListener('load', () => {
     document.getElementById('load-btn').addEventListener('click', () => document.getElementById('load-input').click());
     document.getElementById('load-input').addEventListener('change', loadSchedule);
     document.getElementById('copy-btn').addEventListener('click', copyChartToClipboard);
+
+    // Share button
+    const shareBtn = document.getElementById('share-btn');
+    const sharePopup = document.getElementById('share-popup');
+    const shareUrlInput = document.getElementById('share-url-input');
+    const shareCopyBtn = document.getElementById('share-copy-btn');
+
+    shareBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isVisible = sharePopup.style.display !== 'none';
+        if (isVisible) {
+            sharePopup.style.display = 'none';
+        } else {
+            shareUrlInput.value = generateShareUrl();
+            sharePopup.style.display = 'block';
+        }
+    });
+
+    shareCopyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(shareUrlInput.value).then(() => {
+            const orig = shareCopyBtn.textContent;
+            shareCopyBtn.textContent = '✅';
+            setTimeout(() => { shareCopyBtn.textContent = orig; }, 1500);
+        });
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!document.querySelector('.share-wrapper').contains(e.target)) {
+            sharePopup.style.display = 'none';
+        }
+    });
+
     document.getElementById('paste-table-btn').addEventListener('click', togglePasteArea);
     document.getElementById('export-excel-btn').addEventListener('click', exportToExcel);
     document.getElementById('undo-btn').addEventListener('click', undo);
@@ -310,6 +363,13 @@ window.addEventListener('load', () => {
 
     // Actualizar canvas cuando cambia el tamaño de la ventana
     window.addEventListener('resize', updatePreview);
+
+    // Cargar desde URL compartida si el hash cambia en la misma pestaña
+    window.addEventListener('hashchange', () => {
+        if (location.hash.startsWith('#s=')) {
+            loadFromShareUrl();
+        }
+    });
 
     // Guardar estado inicial
     setTimeout(saveToHistory, 500); // Un pequeño retraso para asegurar que todo se cargó
@@ -518,9 +578,11 @@ function updateHistoryButtons() {
 // --- MANEJO DE PROYECTOS ---
 
 function addProject(projectData) {
+    const defaultColor = colorPalette[nextColorIndex % colorPalette.length];
     const newProject = {
         name: projectData.name || `Proyecto ${projects.length + 1}`,
-        color: projectData.color || colorPalette[nextColorIndex % colorPalette.length],
+        color: projectData.color || defaultColor,
+        defaultColor: defaultColor,
         tasksByRow: []
     };
     nextColorIndex++;
@@ -567,6 +629,48 @@ function deleteProject(index) {
 }
 
 // --- GUARDAR Y CARGAR ---
+
+function generateShareUrl() {
+    const state = {
+        title: document.getElementById('cronograma-title').value,
+        startMonth: document.getElementById('start-month').value,
+        endMonth: document.getElementById('end-month').value,
+        theme: document.getElementById('theme-selector').value,
+        lang: document.getElementById('lang-selector').value,
+        projects: projects
+    };
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+    return `${location.origin}${location.pathname}#s=${encoded}`;
+}
+
+function loadFromShareUrl() {
+    const hash = location.hash;
+    if (!hash.startsWith('#s=')) return;
+    try {
+        const encoded = hash.slice(3);
+        const data = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+        if (data.title) document.getElementById('cronograma-title').value = data.title;
+        if (data.startMonth) document.getElementById('start-month').value = data.startMonth;
+        if (data.endMonth) document.getElementById('end-month').value = data.endMonth;
+        if (data.theme) {
+            document.getElementById('theme-selector').value = data.theme;
+            applyTheme(data.theme);
+        }
+        if (data.lang) {
+            document.getElementById('lang-selector').value = data.lang;
+            applyLanguage(data.lang);
+        }
+        if (data.projects && Array.isArray(data.projects)) {
+            projects.length = 0;
+            Array.prototype.push.apply(projects, data.projects);
+        }
+        window.history.replaceState(null, '', location.pathname);
+        updatePreview();
+        saveToHistory();
+    } catch (e) {
+        console.error('Error al cargar desde URL compartida:', e);
+    }
+}
 
 function saveStateToLocalStorage() {
     try {
@@ -624,8 +728,13 @@ function saveSchedule() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataToSave, null, 2));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
-    const fileName = (dataToSave.title || 'cronograma').replace(/\s+/g, '_');
-    downloadAnchorNode.setAttribute("download", `${fileName}.json`);
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const datePrefix = `${String(now.getFullYear()).slice(-2)}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+    const lang = document.getElementById('lang-selector').value;
+    const scheduleWord = lang === 'en' ? 'Schedule' : 'Cronograma';
+    const fileName = (dataToSave.title || scheduleWord).replace(/\s+/g, '_');
+    downloadAnchorNode.setAttribute("download", `${datePrefix}_${scheduleWord}_${fileName}.json`);
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
@@ -753,9 +862,11 @@ function processPastedData(text) {
 
         // Si el proyecto no existe, crearlo
         if (!project) {
+            const defaultColor = colorPalette[nextColorIndex % colorPalette.length];
             project = {
                 name: projectName,
-                color: colorPalette[nextColorIndex % colorPalette.length],
+                color: defaultColor,
+                defaultColor: defaultColor,
                 tasksByRow: []
             };
             projects.push(project);
@@ -846,6 +957,11 @@ function openProjectEditModal(projectIndex) {
     document.getElementById('modal-project-name').value = project.name;
     document.getElementById('modal-project-color').value = project.color;
 
+    // Estado del checkbox compacto: marcado si TODAS las tareas son compactas
+    const allTasks = project.tasksByRow.flat();
+    const allCompact = allTasks.length > 0 && allTasks.every(t => !!t.compact);
+    document.getElementById('modal-project-compact').checked = allCompact;
+
     const modal = document.getElementById('project-edit-modal');
     modal.style.display = 'flex';
     saveToHistory();
@@ -859,6 +975,26 @@ function openProjectEditModal(projectIndex) {
         }
     };
     document.getElementById('modal-project-accept-btn').onclick = closeProjectEditModal;
+
+    document.getElementById('modal-project-reset-color-btn').onclick = () => {
+        const defaultColor = project.defaultColor || colorPalette[projectIndex % colorPalette.length];
+        document.getElementById('modal-project-color').value = defaultColor;
+        project.color = defaultColor;
+        project.tasksByRow.forEach(row => row.forEach(task => { delete task.color; }));
+        updatePreview();
+    };
+
+    const compactCheckbox = document.getElementById('modal-project-compact');
+    const projectCompactToggle = document.querySelector('#project-edit-modal .compact-toggle');
+    if (projectCompactToggle) {
+        projectCompactToggle.classList.toggle('active', allCompact);
+    }
+    compactCheckbox.onchange = () => {
+        const isCompact = compactCheckbox.checked;
+        project.tasksByRow.forEach(row => row.forEach(task => { task.compact = isCompact; }));
+        if (projectCompactToggle) projectCompactToggle.classList.toggle('active', isCompact);
+        updatePreview();
+    };
 
     const modalInputs = ['modal-project-name', 'modal-project-color'];
     modalInputs.forEach(id => {
@@ -912,6 +1048,7 @@ function openTaskModal(projectIndex, rowIndex, taskIndex) {
     document.getElementById('modal-task-name').value = task.name;
     document.getElementById('modal-task-type').value = task.isMilestone ? 'milestone' : 'normal';
     document.getElementById('modal-text-position').value = task.textPosition;
+    document.getElementById('modal-task-compact').checked = !!task.compact;
     document.getElementById('modal-task-color').value = task.color || projects[projectIndex].color;
     document.getElementById('modal-task-completed').checked = !!task.completed;
 
@@ -939,11 +1076,12 @@ function openTaskModal(projectIndex, rowIndex, taskIndex) {
         updatePreview();
     };
 
-    const modalInputs = ['modal-task-name', 'modal-task-type', 'modal-text-position', 'modal-task-color', 'modal-task-completed'];
+    const modalInputs = ['modal-task-name', 'modal-task-type', 'modal-text-position', 'modal-task-compact', 'modal-task-color', 'modal-task-completed'];
     modalInputs.forEach(id => {
         const el = document.getElementById(id);
-        el.onchange = id === 'modal-task-completed' ? () => { updateTaskFromModal(); saveToHistory(); } : updateTaskFromModal;
-        if (id !== 'modal-task-completed') el.oninput = updateTaskFromModal;
+        const isCheckbox = id === 'modal-task-completed' || id === 'modal-task-compact';
+        el.onchange = isCheckbox ? () => { updateTaskFromModal(); saveToHistory(); } : updateTaskFromModal;
+        if (!isCheckbox) el.oninput = updateTaskFromModal;
         el.onkeydown = (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -959,6 +1097,14 @@ function updateStylePickerSelection() {
     document.querySelectorAll('.task-style-option').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.type === type && btn.dataset.text === text);
     });
+    const compactToggle = document.querySelector('#task-modal .compact-toggle');
+    if (compactToggle) {
+        compactToggle.classList.toggle('active', document.getElementById('modal-task-compact').checked);
+    }
+    const completedToggle = document.getElementById('task-completed-toggle');
+    if (completedToggle) {
+        completedToggle.classList.toggle('active', document.getElementById('modal-task-completed').checked);
+    }
 }
 
 // Inicializar listeners de los botones de estilo
@@ -969,6 +1115,32 @@ document.querySelectorAll('.task-style-option').forEach(btn => {
         updateStylePickerSelection();
         updateTaskFromModal();
     });
+});
+
+document.querySelector('#task-modal .style-toggles-right .compact-toggle').addEventListener('click', (e) => {
+    e.preventDefault();
+    const cb = document.getElementById('modal-task-compact');
+    cb.checked = !cb.checked;
+    updateStylePickerSelection();
+    updateTaskFromModal();
+    saveToHistory();
+});
+
+document.getElementById('task-completed-toggle').addEventListener('click', (e) => {
+    e.preventDefault();
+    const cb = document.getElementById('modal-task-completed');
+    cb.checked = !cb.checked;
+    updateStylePickerSelection();
+    updateTaskFromModal();
+    saveToHistory();
+});
+
+document.querySelector('#project-edit-modal .compact-toggle').addEventListener('click', (e) => {
+    e.preventDefault();
+    const cb = document.getElementById('modal-project-compact');
+    cb.checked = !cb.checked;
+    cb.dispatchEvent(new Event('change'));
+    saveToHistory();
 });
 
 function closeTaskModal() {
@@ -986,6 +1158,7 @@ function updateTaskFromModal() {
         name: document.getElementById('modal-task-name').value.trim() || 'Tarea sin nombre',
         isMilestone: document.getElementById('modal-task-type').value === 'milestone',
         textPosition: document.getElementById('modal-text-position').value,
+        compact: document.getElementById('modal-task-compact').checked,
         color: document.getElementById('modal-task-color').value === projects[project].color ? undefined : document.getElementById('modal-task-color').value,
         completed: document.getElementById('modal-task-completed').checked
     };
@@ -1013,7 +1186,9 @@ function initCanvasSize() {
     let totalHeight = headerHeight;
     projects.forEach(p => {
         totalHeight += 15; // Espacio superior del proyecto
-        totalHeight += p.tasksByRow.length * rowHeight;
+        p.tasksByRow.forEach(row => {
+            totalHeight += getRowHeight(row);
+        });
         totalHeight += 40; // Espacio para el botón '+ Añadir Tarea' y su padding
     });
 
@@ -1027,6 +1202,15 @@ function initCanvasSize() {
     canvas.height = finalHeight * dpr; // Un rowHeight extra para padding inferior
 
     ctx.scale(dpr, dpr);
+
+    // Sincronizar tamaño del canvas del header sticky
+    const hCanvas = document.getElementById('ganttHeaderCanvas');
+    if (hCanvas) {
+        hCanvas.style.height = `${headerHeight}px`;
+        hCanvas.style.marginBottom = `-${headerHeight}px`;
+        hCanvas.width = canvas.width;
+        hCanvas.height = headerHeight * dpr;
+    }
 }
 
 // --- MANEJADORES DE EVENTOS DEL CANVAS ---
@@ -1278,7 +1462,9 @@ function handleCanvasMouseMove(e) {
             let newTargetIndex = projects.length;
 
             for (let i = 0; i < projects.length; i++) {
-                const projectHeight = 15 + projects[i].tasksByRow.length * rowHeight + 40;
+                let ph = 0;
+                projects[i].tasksByRow.forEach(r => { ph += getRowHeight(r); });
+                const projectHeight = 15 + ph + 40;
                 if (y < currentY + projectHeight / 2) {
                     newTargetIndex = i;
                     break;
@@ -1343,16 +1529,27 @@ function handleCanvasMouseMove(e) {
             // que inserta un placeholder que desplaza las filas siguientes.
             let projectTopY = headerHeight;
             for (let i = 0; i < projectIndex; i++) {
-                projectTopY += 15 + projects[i].tasksByRow.length * rowHeight + 40;
+                let ph = 0;
+                projects[i].tasksByRow.forEach(r => { ph += getRowHeight(r); });
+                projectTopY += 15 + ph + 40;
             }
             projectTopY += 15;
 
             const numRows = projects[projectIndex].tasksByRow.length;
 
+            // Construir acumulados de Y por fila para soportar alturas dinámicas
+            const rowTops = [];
+            let accY = 0;
+            for (let i = 0; i < numRows; i++) {
+                rowTops.push(accY);
+                accY += getRowHeight(projects[projectIndex].tasksByRow[i]);
+            }
+            const totalProjectHeight = accY;
+
             // Determinar el destino de drop:
             // - Si el cursor cae en el tercio central de una fila existente → fusionar (merge)
             // - Si cae en el tercio superior/inferior (entre filas) → insertar nueva fila
-            const projectBottomY = projectTopY + numRows * rowHeight;
+            const projectBottomY = projectTopY + totalProjectHeight;
             const mergeZoneFraction = 0.34; // 34% central de cada fila activa el merge
 
             let newDropTarget = null;
@@ -1360,16 +1557,25 @@ function handleCanvasMouseMove(e) {
             if (y > projectTopY - rowHeight / 2 && y < projectBottomY + rowHeight / 2) {
                 // Identificar en qué fila estamos
                 const relY = y - projectTopY;
-                const hoveredRow = Math.floor(relY / rowHeight);
+                let hoveredRow = numRows - 1;
+                for (let i = 0; i < numRows; i++) {
+                    if (relY < rowTops[i] + getRowHeight(projects[projectIndex].tasksByRow[i])) {
+                        hoveredRow = i;
+                        break;
+                    }
+                }
+                if (relY < 0) hoveredRow = -1;
+                else if (relY >= totalProjectHeight) hoveredRow = numRows;
                 const clampedRow = Math.max(0, Math.min(hoveredRow, numRows - 1));
 
                 if (hoveredRow >= 0 && hoveredRow < numRows) {
+                    const curRowHeight = getRowHeight(projects[projectIndex].tasksByRow[hoveredRow]);
                     // Si el cursor está en la misma fila de origen → sameRow (solo cambia startWeek)
                     if (hoveredRow === rowIndex) {
                         newDropTarget = { projectIndex, rowIndex: hoveredRow, sameRow: true };
                     } else {
                         // Posición relativa dentro de la fila [0..1]
-                        const posInRow = (relY - hoveredRow * rowHeight) / rowHeight;
+                        const posInRow = (relY - rowTops[hoveredRow]) / curRowHeight;
                         const mergeMin = (1 - mergeZoneFraction) / 2;
                         const mergeMax = 1 - mergeMin;
 
@@ -1426,6 +1632,14 @@ function draw() {
     const testStateEl = document.getElementById('app-test-state');
     if (testStateEl) {
         testStateEl.innerText = JSON.stringify(projects);
+    }
+
+    // Copiar la región del header al canvas sticky
+    const hCanvas = document.getElementById('ganttHeaderCanvas');
+    if (hCanvas && hCanvas.width > 0) {
+        const hCtx = hCanvas.getContext('2d');
+        hCtx.clearRect(0, 0, hCanvas.width, hCanvas.height);
+        hCtx.drawImage(canvas, 0, 0, canvas.width, hCanvas.height, 0, 0, hCanvas.width, hCanvas.height);
     }
 }
 
@@ -1518,7 +1732,8 @@ function drawProjects() {
         y += 15;
 
         // Dibujar siempre el nombre del proyecto y sus iconos
-        const projectHeight = project.tasksByRow.length * rowHeight;
+        let projectHeight = 0;
+        project.tasksByRow.forEach(row => { projectHeight += getRowHeight(row); });
         const projectCenterY = y + projectHeight / 2;
         const textX = 20;
         const maxTextWidth = projectLabelWidth - textX - 10;
@@ -1551,14 +1766,15 @@ function drawProjects() {
             }
 
             if (i < numRows) {
+                const currentRowHeight = getRowHeight(project.tasksByRow[i]);
                 // Highlight de merge — resaltar la fila destino
                 if (isDropTargetProject && isMerge && i === dropRowIndex) {
                     drawMergeHighlight(y);
                 }
                 project.tasksByRow[i].forEach((task, taskIndex) => {
-                    drawTaskBar(task, project, y + rowHeight / 2, projectIndex, i, taskIndex);
+                    drawTaskBar(task, project, y + currentRowHeight / 2, projectIndex, i, taskIndex);
                 });
-                y += rowHeight;
+                y += currentRowHeight;
             }
         }
 
@@ -1629,7 +1845,8 @@ function drawTaskBar(task, project, y, projectIndex, rowIndex, taskIndex) {
     const logicalCanvasWidth = canvas.width / dpr;
     const chartWidth = logicalCanvasWidth - projectLabelWidth;
     const weekWidth = chartWidth / totalWeeks;
-    const barHeight = 30;
+    const isCompact = !!task.compact;
+    const barHeight = isCompact ? 14 : 30;
     const barY = y - barHeight / 2;
     const startX = projectLabelWidth + (task.startWeek - 1) * weekWidth;
     const fullBarWidth = task.duration * weekWidth;
@@ -1642,7 +1859,7 @@ function drawTaskBar(task, project, y, projectIndex, rowIndex, taskIndex) {
     const hitbox = { x: Math.max(startX, projectLabelWidth), y: barY, width: barWidth, height: barHeight, projectIndex, rowIndex, taskIndex };
 
     if (task.isMilestone) {
-        const diamondSize = 20;
+        const diamondSize = isCompact ? 12 : 20;
         hitbox.width = diamondSize;
         hitbox.height = diamondSize;
         hitbox.y = y - diamondSize / 2;
@@ -1663,30 +1880,32 @@ function drawTaskBar(task, project, y, projectIndex, rowIndex, taskIndex) {
     if (isResizing) ctx.globalAlpha = 0.4;
 
     if (task.isMilestone) {
-        const diamondSize = 20;
+        const diamondSize = isCompact ? 12 : 20;
         ctx.save();
         ctx.translate(startX + diamondSize / 2, y);
         ctx.rotate(Math.PI / 4);
         ctx.fillRect(-diamondSize / 2, -diamondSize / 2, diamondSize, diamondSize);
         ctx.restore();
     } else {
-        roundRect(ctx, startX, barY, barWidth, barHeight, 8, true, false);
+        const barRadius = isCompact ? 4 : 8;
+        roundRect(ctx, startX, barY, barWidth, barHeight, barRadius, true, false);
     }
     if (isDragging || isResizing) ctx.globalAlpha = 1.0;
 
     if (isResizing) {
         const ghostStartX = projectLabelWidth + (ghostTask.startWeek - 1) * weekWidth;
         const ghostWidth = ghostTask.duration * weekWidth;
+        const ghostBarRadius = isCompact ? 4 : 8;
         ctx.globalAlpha = 0.6;
         ctx.fillStyle = '#FFFFFF';
         ctx.strokeStyle = '#E0E0E0';
         ctx.lineWidth = 1;
-        roundRect(ctx, ghostStartX, barY, ghostWidth, barHeight, 8, true, true);
+        roundRect(ctx, ghostStartX, barY, ghostWidth, barHeight, ghostBarRadius, true, true);
         ctx.globalAlpha = 1.0;
     }
 
     if (!isDragging && !isResizing) {
-        ctx.font = taskFont;
+        ctx.font = isCompact ? compactTaskFont : taskFont;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         let text = task.name;
@@ -1694,39 +1913,44 @@ function drawTaskBar(task, project, y, projectIndex, rowIndex, taskIndex) {
         const textY = y;
 
         if (task.isMilestone) {
+            const diamondSize = isCompact ? 12 : 20;
             ctx.fillStyle = textColor;
             // Truncar si el texto es muy largo y choca con el borde del canvas
             let milestoneText = text;
-            const maxMilestoneTextWidth = logicalCanvasWidth - (startX + 35);
+            const textOffsetX = diamondSize + 5;
+            const maxMilestoneTextWidth = logicalCanvasWidth - (startX + textOffsetX + 10);
             if (textMetrics.width > maxMilestoneTextWidth) {
                 milestoneText = truncateText(ctx, text, maxMilestoneTextWidth);
             }
-            ctx.fillText(milestoneText, startX + 25, textY);
+            ctx.fillText(milestoneText, startX + textOffsetX, textY);
             ctx.restore();
             return;
         }
 
-        const textFitsInside = fullBarWidth > textMetrics.width + 30;
+        const textPad = isCompact ? 16 : 30;
+        const textPadInner = isCompact ? 6 : 15;
+        const textFitsInside = fullBarWidth > textMetrics.width + textPad;
         if (task.textPosition === 'inside' && textFitsInside) {
-            if (barWidth > textMetrics.width + 30) {
+            if (barWidth > textMetrics.width + textPad) {
                 ctx.fillStyle = '#FFFFFF';
                 ctx.save();
                 ctx.beginPath();
                 ctx.rect(startX, barY, barWidth, barHeight);
                 ctx.clip();
-                ctx.fillText(text, startX + 15, textY);
+                ctx.fillText(text, startX + textPadInner, textY);
                 ctx.restore();
             }
         } else if (task.textPosition === 'inside') {
             // Si el texto debería ir dentro pero no cabe, truncarlo
-            if (barWidth > 40) {
+            const minBarForText = isCompact ? 24 : 40;
+            if (barWidth > minBarForText) {
                 ctx.fillStyle = '#FFFFFF';
                 ctx.save();
                 ctx.beginPath();
                 ctx.rect(startX, barY, barWidth, barHeight);
                 ctx.clip();
-                const truncatedInsideText = truncateText(ctx, text, barWidth - 20);
-                ctx.fillText(truncatedInsideText, startX + 10, textY);
+                const truncatedInsideText = truncateText(ctx, text, barWidth - (isCompact ? 12 : 20));
+                ctx.fillText(truncatedInsideText, startX + (isCompact ? 6 : 10), textY);
                 ctx.restore();
             }
         } else {
@@ -1745,8 +1969,8 @@ function drawTaskBar(task, project, y, projectIndex, rowIndex, taskIndex) {
     }
 
     if (task.completed) {
-        let centerX = task.isMilestone ? startX + 10 : startX + barWidth / 2;
-        drawCheckIcon(ctx, centerX, y, 11);
+        let centerX = task.isMilestone ? startX + (isCompact ? 6 : 10) : startX + barWidth / 2;
+        drawCheckIcon(ctx, centerX, y, isCompact ? 6 : 11);
     }
 
     ctx.restore(); // Restaurar el clipping del área del gráfico
@@ -1808,7 +2032,8 @@ function drawGhostTask() {
     const project = projects[projectIndex];
 
     // Calcular posición y dimensiones
-    const barHeight = 30;
+    const isCompact = !!task.compact;
+    const barHeight = isCompact ? 14 : 30;
     const barY = lastMousePosition.y - offsetY;
     const chartWidth = canvas.width / (window.devicePixelRatio || 1) - projectLabelWidth;
     const weekWidth = chartWidth / totalWeeks;
@@ -1820,22 +2045,23 @@ function drawGhostTask() {
     ctx.fillStyle = task.color || project.color;
 
     if (task.isMilestone) {
-        const diamondSize = 20;
+        const diamondSize = isCompact ? 12 : 20;
         ctx.save();
         ctx.translate(startX + diamondSize / 2, lastMousePosition.y);
         ctx.rotate(Math.PI / 4);
         ctx.fillRect(-diamondSize / 2, -diamondSize / 2, diamondSize, diamondSize);
         ctx.restore();
     } else {
-        roundRect(ctx, startX, barY, barWidth, barHeight, 8, true, false);
+        const barRadius = isCompact ? 4 : 8;
+        roundRect(ctx, startX, barY, barWidth, barHeight, barRadius, true, false);
     }
 
     // Dibujar el texto dentro del fantasma
-    ctx.font = taskFont;
+    ctx.font = isCompact ? compactTaskFont : taskFont;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(task.name, startX + 15, barY + barHeight / 2);
+    ctx.fillText(task.name, startX + (isCompact ? 6 : 15), barY + barHeight / 2);
 
     ctx.globalAlpha = 1.0;
 }
@@ -2055,8 +2281,13 @@ async function copyChartToClipboard() {
         let exportLogicalHeight = headerHeight;
         projects.forEach(p => {
             exportLogicalHeight += 15;
-            const projectRows = p.tasksByRow.length;
-            exportLogicalHeight += (projectRows === 0 ? rowHeight : projectRows * rowHeight);
+            if (p.tasksByRow.length === 0) {
+                exportLogicalHeight += rowHeight;
+            } else {
+                p.tasksByRow.forEach(row => {
+                    exportLogicalHeight += getRowHeight(row);
+                });
+            }
         });
         exportLogicalHeight += rowHeight;
 
@@ -2100,8 +2331,9 @@ async function copyChartToClipboard() {
                     document.body.appendChild(copyFeedback);
                 }
 
+                copyFeedback.textContent = getTranslation('copied');
                 copyFeedback.style.display = 'block';
-                setTimeout(() => { copyFeedback.style.display = 'none'; }, 2000);
+                setTimeout(() => { copyFeedback.style.display = 'none'; }, 2500);
 
             } catch (err) {
                 console.error('Error al copiar al portapapeles:', err);
