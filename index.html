@@ -41,7 +41,19 @@
                 <div class="icon-btn-wrapper">
                     <button id="copy-btn" class="nice-button icon-button" title="Copiar como Imagen"
                         data-i18n-title="copyImageTitle">📋</button>
-                    <span class="icon-btn-label" data-i18n="copyBtn">Copiar</span>
+                    <span class="icon-btn-label" data-i18n="copyBtn">Imagen</span>
+                </div>
+                <div class="icon-btn-wrapper share-wrapper">
+                    <button id="share-btn" class="nice-button icon-button" title="Compartir enlace"
+                        data-i18n-title="shareBtnTitle">🔗</button>
+                    <span class="icon-btn-label" data-i18n="shareBtn">Compartir</span>
+                    <div id="share-popup" class="share-popup" style="display:none;">
+                        <div class="share-popup-title" data-i18n="sharePopupTitle">Compartir enlace</div>
+                        <div class="share-popup-row">
+                            <input type="text" id="share-url-input" readonly>
+                            <button id="share-copy-btn" class="nice-button share-copy-btn" title="Copiar URL">📋</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="icon-btn-wrapper">
                     <button id="export-excel-btn" class="nice-button icon-button" title="Exportar a Excel"
@@ -97,6 +109,7 @@
         </div>
 
         <div id="canvas-container">
+            <canvas id="ganttHeaderCanvas"></canvas>
             <canvas id="ganttCanvas"></canvas>
             <div id="week-tooltip" class="week-tooltip"></div>
         </div>
@@ -163,6 +176,23 @@
                         <text x="36" y="20" font-size="10" fill="var(--text-color)">Abc</text>
                     </svg>
                 </button>
+                <div class="style-toggles-right">
+                    <label class="compact-toggle" title="Compacta" data-i18n-title="compactLabel">
+                        <input type="checkbox" id="modal-task-compact">
+                        <svg class="compact-toggle-icon" viewBox="0 0 20 12" width="20" height="12">
+                            <rect x="1" y="1" width="18" height="4" rx="2" fill="currentColor"/>
+                            <rect x="1" y="7" width="18" height="4" rx="2" fill="currentColor"/>
+                        </svg>
+                        <span data-i18n="compactLabel">Compacta</span>
+                    </label>
+                    <label class="compact-toggle" id="task-completed-toggle" title="Completada" data-i18n-title="completeBtn">
+                        <input type="checkbox" id="modal-task-completed" data-testid="task-completed-checkbox">
+                        <svg class="compact-toggle-icon" viewBox="0 0 18 18" width="16" height="16">
+                            <path d="M2 9 L7 14 L16 4" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span data-i18n="completeBtn">Completada</span>
+                    </label>
+                </div>
             </div>
 
             <div class="modal-row">
@@ -172,17 +202,6 @@
                         <input type="color" id="modal-task-color" data-testid="task-color-input">
                         <button id="modal-reset-color-btn" class="reset-color-btn" title="Restaurar color del proyecto"
                             data-testid="task-reset-color-btn" data-i18n-title="resetColorTitle">🔄</button>
-                    </div>
-                </div>
-                <div>
-                    <label for="modal-task-completed" data-i18n="taskCompletedLabel"
-                        style="visibility: hidden;">Estado:</label>
-                    <div style="display: flex; align-items: center; height: 38px; gap: 8px;">
-                        <input type="checkbox" id="modal-task-completed" data-testid="task-completed-checkbox"
-                            style="width: 18px; height: 18px; margin: 0; cursor: pointer;">
-                        <label for="modal-task-completed"
-                            style="margin-bottom: 0; cursor: pointer; color: var(--text-color);"
-                            data-i18n="completeBtn">Completada</label>
                     </div>
                 </div>
             </div>
@@ -203,13 +222,29 @@
                 <h3 data-i18n="editProjectTitle">Editar Proyecto</h3>
                 <button class="modal-close-icon" data-testid="project-modal-close">&times;</button>
             </div>
-            <label for="modal-project-name" data-i18n="projectNameLabel">Nombre del Proyecto:</label>
+            <label for="modal-project-name" data-i18n="projectNameLabel">Nombre:</label>
             <input type="text" id="modal-project-name" data-testid="project-name-input">
+
+            <label data-i18n="taskStyleLabel">Estilo:</label>
+            <div class="task-style-picker">
+                <label class="compact-toggle" title="Compacto" data-i18n-title="compactProjectLabel">
+                    <input type="checkbox" id="modal-project-compact">
+                    <svg class="compact-toggle-icon" viewBox="0 0 20 12" width="20" height="12">
+                        <rect x="1" y="1" width="18" height="4" rx="2" fill="currentColor"/>
+                        <rect x="1" y="7" width="18" height="4" rx="2" fill="currentColor"/>
+                    </svg>
+                    <span data-i18n="compactProjectLabel">Compacto</span>
+                </label>
+            </div>
 
             <div class="modal-row">
                 <div>
-                    <label for="modal-project-color" data-i18n="projectColorLabel">Color Proyecto:</label>
-                    <input type="color" id="modal-project-color" data-testid="project-color-input">
+                    <label for="modal-project-color" data-i18n="projectColorLabel">Color:</label>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                        <input type="color" id="modal-project-color" data-testid="project-color-input">
+                        <button id="modal-project-reset-color-btn" class="reset-color-btn" title="Restaurar color predeterminado"
+                            data-i18n-title="resetProjectColorTitle">🔄</button>
+                    </div>
                 </div>
             </div>
 

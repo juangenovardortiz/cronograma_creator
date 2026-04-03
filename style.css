@@ -90,7 +90,7 @@ body {
     background-color: var(--container-bg);
     border-radius: 8px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
+    overflow: clip;
     color: var(--text-color);
 }
 
@@ -101,6 +101,9 @@ body {
     padding: 15px 20px;
     background-color: var(--header-bg);
     border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
 .title-container {
@@ -185,6 +188,15 @@ body {
 #ganttCanvas {
     width: 100%;
     background-color: var(--canvas-bg);
+}
+
+#ganttHeaderCanvas {
+    width: 100%;
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    pointer-events: none;
 }
 
 .bottom-controls {
@@ -729,6 +741,7 @@ canvas {
 
 .task-style-picker {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 15px;
 }
@@ -752,6 +765,48 @@ canvas {
     background-color: var(--header-bg);
     box-shadow: 0 0 0 1px var(--modal-border);
 }
+
+.style-toggles-right {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+}
+
+.compact-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+    color: var(--text-color);
+    opacity: 0.55;
+    font-size: 12px;
+    user-select: none;
+}
+
+.compact-toggle input {
+    display: none;
+}
+
+.compact-toggle-icon {
+    flex-shrink: 0;
+}
+
+.compact-toggle:hover {
+    border-color: var(--modal-border);
+    opacity: 0.8;
+}
+
+.compact-toggle.active {
+    border-color: var(--modal-border);
+    background-color: var(--header-bg);
+    box-shadow: 0 0 0 1px var(--modal-border);
+    opacity: 1;
+}
+
 
 .modal-row {
     display: flex;
@@ -850,6 +905,58 @@ canvas {
     letter-spacing: 0.02em;
     white-space: nowrap;
     line-height: 1;
+}
+
+.share-wrapper {
+    position: relative;
+}
+
+.share-popup {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 14px;
+    z-index: 300;
+    min-width: 340px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    white-space: normal;
+}
+
+.share-popup-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-color);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.share-popup-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.share-popup-row input {
+    flex: 1;
+    background: var(--input-bg);
+    color: var(--text-color);
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 0.72rem;
+    font-family: 'Poppins', sans-serif;
+    min-width: 0;
+}
+
+.share-copy-btn {
+    padding: 6px 10px !important;
+    font-size: 1rem !important;
+    flex-shrink: 0;
 }
 
 .button:hover,
