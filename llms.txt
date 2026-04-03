@@ -156,7 +156,7 @@ Full JSON Schema available at: `state.schema.json`
 | `color` | string or null | no | Hex override; null = project color |
 
 ### Default color palette (cycle order)
-`#5B8CC8` `#8A58B0` `#C97838` `#2E9E58` `#C8A028` `#B84848` `#2A9080` `#3A80B0`
+`#6C8EBF` `#9B7EB8` `#D4915E` `#6BAF7B` `#C4A95B` `#5BA8A0` `#7EA3C9` `#B07DA5` `#C4956E` `#8BB5A2`
 
 ---
 

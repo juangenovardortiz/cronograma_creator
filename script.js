@@ -23,7 +23,7 @@ let addTaskHitboxes = []; // Hitboxes para los botones de 'Añadir Tarea'
 let isDrawingForExport = false; // Flag para el dibujado de exportación
 const resizeHandleWidth = 15; // Ancho del área de redimensión
 
-const colorPalette = ['#5B8CC8', '#8A58B0', '#C97838', '#2E9E58', '#C8A028', '#B84848', '#2A9080', '#3A80B0'];
+const colorPalette = ['#6C8EBF', '#9B7EB8', '#D4915E', '#6BAF7B', '#C4A95B', '#5BA8A0', '#7EA3C9', '#B07DA5', '#C4956E', '#8BB5A2'];
 let nextColorIndex = 0;
 
 let months = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
@@ -722,8 +722,8 @@ function loadFromShareUrl() {
         const encoded = hash.slice(3);
         const data = JSON.parse(decodeURIComponent(escape(atob(encoded))));
         if (data.title) document.getElementById('cronograma-title').value = data.title;
-        if (data.startMonth) document.getElementById('start-month').value = data.startMonth;
-        if (data.endMonth) document.getElementById('end-month').value = data.endMonth;
+        if (data.startMonth !== undefined) document.getElementById('start-month').value = data.startMonth;
+        if (data.endMonth !== undefined) document.getElementById('end-month').value = data.endMonth;
         if (data.theme) {
             document.getElementById('theme-selector').value = data.theme;
             applyTheme(data.theme);
@@ -767,8 +767,8 @@ function loadStateFromLocalStorage() {
             const data = JSON.parse(savedState);
 
             if (data.title) document.getElementById('cronograma-title').value = data.title;
-            if (data.startMonth) document.getElementById('start-month').value = data.startMonth;
-            if (data.endMonth) document.getElementById('end-month').value = data.endMonth;
+            if (data.startMonth !== undefined) document.getElementById('start-month').value = data.startMonth;
+            if (data.endMonth !== undefined) document.getElementById('end-month').value = data.endMonth;
             if (data.theme) {
                 document.getElementById('theme-selector').value = data.theme;
                 applyTheme(data.theme);
@@ -827,10 +827,10 @@ function loadSchedule(event) {
             if (data.title) {
                 document.getElementById('cronograma-title').value = data.title;
             }
-            if (data.startMonth) {
+            if (data.startMonth !== undefined) {
                 document.getElementById('start-month').value = data.startMonth;
             }
-            if (data.endMonth) {
+            if (data.endMonth !== undefined) {
                 document.getElementById('end-month').value = data.endMonth;
             }
             if (data.projects && Array.isArray(data.projects)) {
