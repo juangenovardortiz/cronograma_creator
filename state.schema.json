@@ -1,0 +1,133 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://juangenovardortiz.github.io/cronograma_creator/state.schema.json",
+  "title": "CronogramaState",
+  "description": "Full state object for Cronograma Creator. Encode as btoa(unescape(encodeURIComponent(JSON.stringify(state)))) and append as #s=<encoded> to the page URL.",
+  "type": "object",
+  "required": ["title", "startMonth", "endMonth", "theme", "lang", "projects"],
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Schedule title shown in the header",
+      "example": "Q2 Roadmap"
+    },
+    "startMonth": {
+      "type": ["string", "integer"],
+      "description": "Start month index (0 = January, 11 = December)",
+      "minimum": 0,
+      "maximum": 11,
+      "example": "0"
+    },
+    "endMonth": {
+      "type": ["string", "integer"],
+      "description": "End month index (0 = January, 11 = December). Must be >= startMonth.",
+      "minimum": 0,
+      "maximum": 11,
+      "example": "5"
+    },
+    "theme": {
+      "type": "string",
+      "description": "Visual theme",
+      "enum": ["oscuro", "claro", "moderno", "gris"],
+      "default": "oscuro"
+    },
+    "lang": {
+      "type": "string",
+      "description": "UI language",
+      "enum": ["es", "en"],
+      "default": "es"
+    },
+    "projects": {
+      "type": "array",
+      "description": "List of project groups",
+      "items": {
+        "$ref": "#/definitions/Project"
+      }
+    }
+  },
+  "definitions": {
+    "Project": {
+      "type": "object",
+      "required": ["name", "color", "tasksByRow"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Project group label",
+          "example": "Design"
+        },
+        "color": {
+          "type": "string",
+          "description": "Hex color for all tasks in this project (unless overridden per task)",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "example": "#5B8CC8"
+        },
+        "compact": {
+          "type": "boolean",
+          "description": "Render project rows at reduced height",
+          "default": false
+        },
+        "tasksByRow": {
+          "type": "array",
+          "description": "Array of rows. Each row is an array of tasks rendered on the same horizontal line.",
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Task"
+            }
+          }
+        }
+      }
+    },
+    "Task": {
+      "type": "object",
+      "required": ["name", "startWeek", "duration"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Task label",
+          "example": "Research"
+        },
+        "startWeek": {
+          "type": "integer",
+          "description": "1-based week number relative to startMonth. Week 1 = first week of startMonth.",
+          "minimum": 1,
+          "example": 1
+        },
+        "duration": {
+          "type": "integer",
+          "description": "Duration in weeks",
+          "minimum": 1,
+          "example": 4
+        },
+        "isMilestone": {
+          "type": "boolean",
+          "description": "If true, renders as a diamond (milestone marker). Duration should be 1.",
+          "default": false
+        },
+        "textPosition": {
+          "type": "string",
+          "description": "Where to display the task label",
+          "enum": ["inside", "outside"],
+          "default": "outside"
+        },
+        "compact": {
+          "type": "boolean",
+          "description": "Render this task row at reduced height",
+          "default": false
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Mark task as completed (renders with strikethrough style)",
+          "default": false
+        },
+        "color": {
+          "type": ["string", "null"],
+          "description": "Override color for this specific task. null = inherit project color.",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "default": null,
+          "example": null
+        }
+      }
+    }
+  }
+}

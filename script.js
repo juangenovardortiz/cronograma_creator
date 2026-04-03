@@ -175,6 +175,17 @@ function getTranslation(key) {
     return (translations[lang] && translations[lang][key]) ? translations[lang][key] : (translations['es'][key] || key);
 }
 
+// --- MODO AGENTE / AGENT MODE ---
+const _agentMode = new URLSearchParams(location.search).get('mode') === 'agent';
+if (_agentMode) {
+    console.log('[CronogramaAI] Agent mode active. Modals disabled. Animations disabled. Deterministic render.');
+    // Suprimir confirm() y alert() para evitar bloqueos en headless
+    window._origConfirm = window.confirm;
+    window._origAlert = window.alert;
+    window.confirm = () => true;
+    window.alert = (msg) => console.log('[CronogramaAI] alert suppressed:', msg);
+}
+
 // --- INICIALIZACIÓN ---
 window.addEventListener('load', () => {
     canvas = document.getElementById('ganttCanvas');
@@ -375,35 +386,63 @@ window.addEventListener('load', () => {
     setTimeout(saveToHistory, 500); // Un pequeño retraso para asegurar que todo se cargó
 
     // --- AUTO-EXPORT PARA AGENTES DE IA / AI AGENT AUTO-EXPORT ---
-    // Uso: ?autoexport=url  → muestra la URL de compartir en el DOM
-    //      ?autoexport=image → descarga automáticamente la imagen PNG
+    // ?autoexport=url   → escribe resultado JSON en #autoexport-result + muestra URL
+    // ?autoexport=image → descarga PNG + escribe resultado JSON en #autoexport-result
+    // ?autoexport=json  → escribe estado JSON completo en #autoexport-result
+    function _writeAutoexportResult(result) {
+        let el = document.getElementById('autoexport-result');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'autoexport-result';
+            document.body.appendChild(el);
+        }
+        el.dataset.result = JSON.stringify(result);
+        el.textContent = JSON.stringify(result);
+        if (_agentMode) console.log('[CronogramaAI] autoexport result:', result);
+        return el;
+    }
+
     const _urlParams = new URLSearchParams(location.search);
     const _autoexport = _urlParams.get('autoexport');
+
     if (_autoexport === 'url') {
         setTimeout(() => {
             const shareUrl = generateShareUrl();
-            const el = document.createElement('div');
-            el.id = 'autoexport-result';
-            el.dataset.shareUrl = shareUrl;
+            const result = { success: true, type: 'url', data: shareUrl };
+            const el = _writeAutoexportResult(result);
             el.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#0d1117;color:#58a6ff;padding:10px 16px;font-family:monospace;font-size:13px;z-index:9999;word-break:break-all;border-bottom:2px solid #58a6ff;';
             el.textContent = shareUrl;
-            document.body.appendChild(el);
+            el.dataset.result = JSON.stringify(result);
         }, 600);
+
     } else if (_autoexport === 'image') {
         setTimeout(async () => {
-            const dataUrl = await getImageDataUrl();
-            const a = document.createElement('a');
-            a.href = dataUrl;
-            const title = (document.getElementById('cronograma-title').value || 'cronograma')
-                .replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            a.download = `${title}.png`;
-            a.click();
-            const el = document.getElementById('autoexport-result') || document.createElement('div');
-            el.id = 'autoexport-result';
-            el.dataset.imageDataUrl = dataUrl;
-            el.dataset.shareUrl = generateShareUrl();
-            el.style.display = 'none';
-            document.body.appendChild(el);
+            try {
+                const dataUrl = await getImageDataUrl();
+                if (!_agentMode) {
+                    const a = document.createElement('a');
+                    a.href = dataUrl;
+                    const title = (document.getElementById('cronograma-title').value || 'cronograma')
+                        .replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    a.download = `${title}.png`;
+                    a.click();
+                }
+                const el = _writeAutoexportResult({ success: true, type: 'image', data: dataUrl });
+                el.style.display = 'none';
+            } catch (e) {
+                _writeAutoexportResult({ success: false, type: 'image', error: e.message });
+            }
+        }, 600);
+
+    } else if (_autoexport === 'json') {
+        setTimeout(() => {
+            try {
+                const state = window.CronogramaAPI.getState();
+                const el = _writeAutoexportResult({ success: true, type: 'json', data: state });
+                el.style.display = 'none';
+            } catch (e) {
+                _writeAutoexportResult({ success: false, type: 'json', error: e.message });
+            }
         }, 600);
     }
 });
@@ -1672,9 +1711,11 @@ function draw() {
             lang: document.getElementById('lang-selector').value,
             projects: projects
         };
-        testStateEl.dataset.shareUrl = generateShareUrl();
+        const shareUrl = generateShareUrl();
+        testStateEl.dataset.shareUrl = shareUrl;
         testStateEl.dataset.state = JSON.stringify(currentState);
-        testStateEl.innerText = JSON.stringify(projects);
+        testStateEl.dataset.imageReady = 'true';
+        testStateEl.innerText = JSON.stringify({ state: currentState, shareUrl, imageReady: true });
     }
 
     // Copiar la región del header al canvas sticky
@@ -2352,15 +2393,21 @@ async function getImageDataUrl() {
  * API global para interacción programática / headless.
  * Global API object for programmatic and headless interaction.
  *
- * Uso / Usage:
- *   CronogramaAPI.getState()          → objeto con el estado actual
- *   CronogramaAPI.setState(obj)        → carga un estado
- *   CronogramaAPI.getShareUrl()        → URL con hash para compartir
- *   CronogramaAPI.getImageDataUrl()    → Promise<string> data URL PNG
- *   CronogramaAPI.loadFromJSON(str)    → carga desde JSON string u objeto
+ * Methods:
+ *   getState()            → current state object
+ *   setState(obj)          → load state from object
+ *   createFromJSON(str)    → load state from JSON string or object
+ *   loadFromJSON(str)      → alias for createFromJSON
+ *   getShareUrl()          → URL with #s= hash
+ *   exportAsURL()          → alias for getShareUrl
+ *   getImageDataUrl()      → Promise<string> PNG data URL
+ *   exportAsImage()        → alias for getImageDataUrl
+ *   validateState(obj)     → { valid: boolean, errors: string[] }
+ *   selfTest()             → Promise<object> run full self-test
  */
 window.CronogramaAPI = {
     version: '3.0',
+    agentMode: _agentMode,
 
     getState() {
         return {
@@ -2376,20 +2423,146 @@ window.CronogramaAPI = {
     setState(stateObj) {
         applyState(stateObj);
         saveToHistory();
+        if (_agentMode) console.log('[CronogramaAI] setState applied.');
+    },
+
+    createFromJSON(jsonOrStr) {
+        const data = typeof jsonOrStr === 'string' ? JSON.parse(jsonOrStr) : jsonOrStr;
+        applyState(data);
+        saveToHistory();
+        if (_agentMode) console.log('[CronogramaAI] createFromJSON applied.');
+    },
+
+    loadFromJSON(jsonOrStr) {
+        return this.createFromJSON(jsonOrStr);
     },
 
     getShareUrl() {
         return generateShareUrl();
     },
 
+    exportAsURL() {
+        return this.getShareUrl();
+    },
+
     async getImageDataUrl() {
         return await getImageDataUrl();
     },
 
-    loadFromJSON(jsonOrStr) {
-        const data = typeof jsonOrStr === 'string' ? JSON.parse(jsonOrStr) : jsonOrStr;
-        applyState(data);
-        saveToHistory();
+    async exportAsImage() {
+        return await this.getImageDataUrl();
+    },
+
+    validateState(stateObj) {
+        const errors = [];
+        if (!stateObj || typeof stateObj !== 'object') {
+            return { valid: false, errors: ['State must be a non-null object'] };
+        }
+        if (typeof stateObj.title !== 'string') errors.push('title must be a string');
+        const sm = parseInt(stateObj.startMonth);
+        if (isNaN(sm) || sm < 0 || sm > 11) errors.push('startMonth must be 0–11');
+        const em = parseInt(stateObj.endMonth);
+        if (isNaN(em) || em < 0 || em > 11) errors.push('endMonth must be 0–11');
+        if (!['oscuro', 'claro', 'moderno', 'gris'].includes(stateObj.theme)) errors.push('theme must be one of: oscuro, claro, moderno, gris');
+        if (!['es', 'en'].includes(stateObj.lang)) errors.push('lang must be "es" or "en"');
+        if (!Array.isArray(stateObj.projects)) {
+            errors.push('projects must be an array');
+        } else {
+            stateObj.projects.forEach((p, pi) => {
+                if (typeof p.name !== 'string') errors.push(`projects[${pi}].name must be a string`);
+                if (typeof p.color !== 'string' || !/^#[0-9A-Fa-f]{6}$/.test(p.color)) errors.push(`projects[${pi}].color must be a hex color like #5B8CC8`);
+                if (!Array.isArray(p.tasksByRow)) {
+                    errors.push(`projects[${pi}].tasksByRow must be an array`);
+                } else {
+                    p.tasksByRow.forEach((row, ri) => {
+                        if (!Array.isArray(row)) { errors.push(`projects[${pi}].tasksByRow[${ri}] must be an array`); return; }
+                        row.forEach((t, ti) => {
+                            if (typeof t.name !== 'string') errors.push(`projects[${pi}].tasksByRow[${ri}][${ti}].name must be a string`);
+                            if (!Number.isInteger(t.startWeek) || t.startWeek < 1) errors.push(`projects[${pi}].tasksByRow[${ri}][${ti}].startWeek must be integer >= 1`);
+                            if (!Number.isInteger(t.duration) || t.duration < 1) errors.push(`projects[${pi}].tasksByRow[${ri}][${ti}].duration must be integer >= 1`);
+                        });
+                    });
+                }
+            });
+        }
+        return { valid: errors.length === 0, errors };
+    },
+
+    async selfTest() {
+        const results = { passed: [], failed: [], success: false };
+        const log = (label, ok, detail) => {
+            (ok ? results.passed : results.failed).push({ test: label, detail });
+            if (_agentMode) console.log(`[CronogramaAI] selfTest [${ok ? 'PASS' : 'FAIL'}] ${label}`, detail || '');
+        };
+
+        // Test: cargar estado de ejemplo
+        const exampleState = {
+            title: 'Self Test Schedule', startMonth: '0', endMonth: '5',
+            theme: 'oscuro', lang: 'en',
+            projects: [{
+                name: 'Test Project', color: '#5B8CC8',
+                tasksByRow: [[{ name: 'Task A', startWeek: 1, duration: 4, isMilestone: false, textPosition: 'outside', compact: false, completed: false, color: null }]]
+            }]
+        };
+        try {
+            this.createFromJSON(exampleState);
+            log('createFromJSON', true);
+        } catch (e) { log('createFromJSON', false, e.message); }
+
+        // Test: getState
+        try {
+            const s = this.getState();
+            log('getState', s && s.title === 'Self Test Schedule', s ? s.title : 'null');
+        } catch (e) { log('getState', false, e.message); }
+
+        // Test: validateState (valid)
+        try {
+            const v = this.validateState(exampleState);
+            log('validateState (valid)', v.valid, v.errors);
+        } catch (e) { log('validateState (valid)', false, e.message); }
+
+        // Test: validateState (invalid)
+        try {
+            const v = this.validateState({ title: 123, startMonth: 99, endMonth: -1, theme: 'x', lang: 'fr', projects: 'nope' });
+            log('validateState (detects errors)', v.errors.length >= 5, `${v.errors.length} errors found`);
+        } catch (e) { log('validateState (detects errors)', false, e.message); }
+
+        // Test: getShareUrl
+        try {
+            const url = this.getShareUrl();
+            log('getShareUrl', typeof url === 'string' && url.includes('#s='), url.substring(0, 60) + '...');
+        } catch (e) { log('getShareUrl', false, e.message); }
+
+        // Test: exportAsURL alias
+        try {
+            const url = this.exportAsURL();
+            log('exportAsURL (alias)', typeof url === 'string' && url.includes('#s='));
+        } catch (e) { log('exportAsURL (alias)', false, e.message); }
+
+        // Test: getImageDataUrl
+        try {
+            const img = await this.getImageDataUrl();
+            log('getImageDataUrl', typeof img === 'string' && img.startsWith('data:image/png;base64,'), `length=${img.length}`);
+        } catch (e) { log('getImageDataUrl', false, e.message); }
+
+        // Test: exportAsImage alias
+        try {
+            const img = await this.exportAsImage();
+            log('exportAsImage (alias)', typeof img === 'string' && img.startsWith('data:image/png'));
+        } catch (e) { log('exportAsImage (alias)', false, e.message); }
+
+        // Test: #app-test-state
+        try {
+            const el = document.getElementById('app-test-state');
+            log('#app-test-state has data-share-url', el && !!el.dataset.shareUrl);
+            log('#app-test-state has data-state', el && !!el.dataset.state);
+            log('#app-test-state data-image-ready', el && el.dataset.imageReady === 'true');
+        } catch (e) { log('#app-test-state', false, e.message); }
+
+        results.success = results.failed.length === 0;
+        results.summary = `${results.passed.length} passed, ${results.failed.length} failed`;
+        console.log('[CronogramaAI] selfTest complete:', results.summary);
+        return results;
     }
 };
 

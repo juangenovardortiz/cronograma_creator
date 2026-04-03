@@ -1,41 +1,92 @@
-# Cronograma Interactivo — AI Agent Instructions
+# Cronograma Creator — AI Agent Instructions
 
-This is an interactive Gantt chart / schedule builder that runs entirely in the browser (static HTML + JS).
-An AI agent can create and share schedules programmatically using the methods below.
+> Version: 3.0
+> URL: https://juangenovardortiz.github.io/cronograma_creator/
+> Schema: https://juangenovardortiz.github.io/cronograma_creator/state.schema.json
+> Well-known: https://juangenovardortiz.github.io/cronograma_creator/.well-known/cronograma-ai.json
+
+Cronograma Creator is an interactive Gantt chart builder that runs entirely in the browser.
+AI agents can create, load, and export schedules **without any human interaction**, using three approaches described below.
 
 ---
 
-## Option 1: Construct the share URL directly (no browser needed)
+## QUICK START — Generate a share URL without a browser
 
-The share URL format is:
+This is the fastest method. No browser or API needed.
 
-```
-https://<host>/index.html#s=<base64(JSON.stringify(state))>
-```
-
-Where `base64` = `btoa(unescape(encodeURIComponent(JSON.stringify(state))))` in JavaScript,
-or standard Base64 URL-safe encoding of the UTF-8 JSON string.
-
-### Full State JSON Schema
-
-```json
-{
-  "title": "My Schedule",
-  "startMonth": "0",
-  "endMonth": "11",
-  "theme": "oscuro",
-  "lang": "en",
+```javascript
+// 1. Build the state object
+const state = {
+  "title": "Q2 Roadmap",
+  "startMonth": "0",        // 0 = January
+  "endMonth": "5",          // 5 = June
+  "theme": "oscuro",        // oscuro | claro | moderno | gris
+  "lang": "en",             // en | es
   "projects": [
     {
-      "name": "Project Name",
+      "name": "Design",
       "color": "#5B8CC8",
       "tasksByRow": [
         [
           {
-            "name": "Task name",
+            "name": "Research",
             "startWeek": 1,
+            "duration": 3,
+            "isMilestone": false,
+            "textPosition": "outside",
+            "compact": false,
+            "completed": false,
+            "color": null
+          }
+        ],
+        [
+          {
+            "name": "Wireframes",
+            "startWeek": 4,
             "duration": 4,
             "isMilestone": false,
+            "textPosition": "inside",
+            "compact": false,
+            "completed": false,
+            "color": null
+          }
+        ]
+      ]
+    },
+    {
+      "name": "Development",
+      "color": "#2E9E58",
+      "tasksByRow": [
+        [
+          {
+            "name": "Backend API",
+            "startWeek": 5,
+            "duration": 8,
+            "isMilestone": false,
+            "textPosition": "inside",
+            "compact": false,
+            "completed": false,
+            "color": null
+          }
+        ],
+        [
+          {
+            "name": "Frontend",
+            "startWeek": 9,
+            "duration": 6,
+            "isMilestone": false,
+            "textPosition": "inside",
+            "compact": false,
+            "completed": false,
+            "color": null
+          }
+        ],
+        [
+          {
+            "name": "Launch",
+            "startWeek": 15,
+            "duration": 1,
+            "isMilestone": true,
             "textPosition": "outside",
             "compact": false,
             "completed": false,
@@ -45,159 +96,267 @@ or standard Base64 URL-safe encoding of the UTF-8 JSON string.
       ]
     }
   ]
-}
+};
+
+// 2. Encode it
+const hash = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+
+// 3. Build the URL
+const url = `https://juangenovardortiz.github.io/cronograma_creator/#s=${hash}`;
+
+// → Share this URL. It opens the schedule instantly in any browser.
 ```
 
-### Field reference
+**Python equivalent:**
+```python
+import json, base64
+encoded = base64.b64encode(json.dumps(state, ensure_ascii=False).encode('utf-8')).decode('utf-8')
+url = f"https://juangenovardortiz.github.io/cronograma_creator/#s={encoded}"
+```
 
-| Field | Type | Values / Notes |
-|---|---|---|
-| `title` | string | Schedule title shown in the header |
-| `startMonth` | string (int 0–11) | 0=January, 11=December |
-| `endMonth` | string (int 0–11) | Must be >= startMonth (same year assumed) |
-| `theme` | string | `"oscuro"` `"claro"` `"moderno"` `"gris"` |
-| `lang` | string | `"es"` (Spanish) or `"en"` (English) |
-| `projects[].name` | string | Project group label |
-| `projects[].color` | string | Hex color, e.g. `"#5B8CC8"` |
-| `projects[].tasksByRow` | array of arrays | Each inner array = one visual row; tasks in same row overlap horizontally |
-| `task.startWeek` | int (1-based) | Week 1 = first week of startMonth |
-| `task.duration` | int | Duration in weeks |
-| `task.isMilestone` | bool | `true` renders a diamond instead of a bar |
-| `task.textPosition` | string | `"inside"` or `"outside"` |
-| `task.compact` | bool | Uses smaller row height |
-| `task.completed` | bool | Renders with a strikethrough style |
-| `task.color` | string or null | Override color; `null` inherits project color |
+> Note: Python uses standard base64 without `unescape/encodeURIComponent`. Use UTF-8 encoding.
 
-### Color palette (default, cycle order)
+---
+
+## STATE SCHEMA
+
+Full JSON Schema available at: `state.schema.json`
+
+### Top-level fields
+
+| Field | Type | Required | Values |
+|---|---|---|---|
+| `title` | string | yes | Any text |
+| `startMonth` | string or int | yes | 0–11 (0=Jan, 11=Dec) |
+| `endMonth` | string or int | yes | 0–11, must be >= startMonth |
+| `theme` | string | yes | `"oscuro"` `"claro"` `"moderno"` `"gris"` |
+| `lang` | string | yes | `"es"` `"en"` |
+| `projects` | array | yes | See below |
+
+### Project fields
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string | yes | Group label |
+| `color` | string | yes | Hex color e.g. `"#5B8CC8"` |
+| `compact` | boolean | no | Smaller row height for all tasks |
+| `tasksByRow` | array of arrays | yes | Each inner array = one visual row |
+
+### Task fields
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `name` | string | yes | Task label |
+| `startWeek` | integer ≥ 1 | yes | 1 = first week of startMonth |
+| `duration` | integer ≥ 1 | yes | Duration in weeks |
+| `isMilestone` | boolean | no | Diamond shape; use duration=1 |
+| `textPosition` | string | no | `"inside"` or `"outside"` |
+| `compact` | boolean | no | Smaller row height |
+| `completed` | boolean | no | Strikethrough style |
+| `color` | string or null | no | Hex override; null = project color |
+
+### Default color palette (cycle order)
 `#5B8CC8` `#8A58B0` `#C97838` `#2E9E58` `#C8A028` `#B84848` `#2A9080` `#3A80B0`
 
-### Minimal working example (JavaScript)
+---
+
+## JAVASCRIPT API (browser / headless)
+
+When the page is open in a browser, use `window.CronogramaAPI`:
 
 ```javascript
+// Load a schedule
+CronogramaAPI.createFromJSON(stateObjectOrJSONString);
+// or
+CronogramaAPI.setState(stateObject);
+
+// Get the share URL
+const url = CronogramaAPI.getShareUrl();       // also: exportAsURL()
+
+// Get a PNG image (base64 data URL)
+const png = await CronogramaAPI.getImageDataUrl();  // also: exportAsImage()
+
+// Read current state
+const state = CronogramaAPI.getState();
+
+// Validate a state object before loading
+const { valid, errors } = CronogramaAPI.validateState(myState);
+
+// Run self-test
+const results = await CronogramaAPI.selfTest();
+// → { success: true, passed: [...], failed: [...], summary: "9 passed, 0 failed" }
+```
+
+### Headless workflow (Playwright / Puppeteer / browser-use)
+
+```javascript
+const page = await browser.newPage();
+
+// Option A: load a pre-built state URL
+await page.goto('https://juangenovardortiz.github.io/cronograma_creator/#s=<base64hash>');
+
+// Option B: inject state after loading
+await page.goto('https://juangenovardortiz.github.io/cronograma_creator/?mode=agent');
+await page.evaluate((state) => CronogramaAPI.createFromJSON(state), myState);
+
+// Get share URL
+const shareUrl = await page.evaluate(() => CronogramaAPI.getShareUrl());
+
+// Get PNG image as data URL
+const imageDataUrl = await page.evaluate(async () => await CronogramaAPI.getImageDataUrl());
+// imageDataUrl = "data:image/png;base64,..." → decode bytes for the actual PNG
+
+// Run self-test
+const testResults = await page.evaluate(async () => await CronogramaAPI.selfTest());
+```
+
+---
+
+## URL PARAMETERS
+
+All parameters work together. Example: `?mode=agent&autoexport=url#s=<hash>`
+
+### `?mode=agent`
+
+Activates agent mode:
+- Confirms suppressed (auto-approved)
+- Alerts logged to console instead of blocking
+- Deterministic render (no animations)
+- Console logs prefixed with `[CronogramaAI]`
+
+### `?autoexport=url`
+
+On page load, generates the share URL and writes to `#autoexport-result`:
+```json
+{ "success": true, "type": "url", "data": "https://.../#s=..." }
+```
+Also shows the URL visually at the top of the page.
+
+### `?autoexport=image`
+
+On page load, generates the PNG and writes to `#autoexport-result`:
+```json
+{ "success": true, "type": "image", "data": "data:image/png;base64,..." }
+```
+Also triggers a file download (suppressed in agent mode).
+
+### `?autoexport=json`
+
+On page load, writes the full state JSON to `#autoexport-result`:
+```json
+{ "success": true, "type": "json", "data": { "title": "...", "projects": [...] } }
+```
+
+---
+
+## DOM ELEMENTS ALWAYS AVAILABLE
+
+After every render, these DOM elements are updated automatically:
+
+### `#app-test-state`
+
+```javascript
+document.getElementById('app-test-state').dataset.shareUrl   // share URL string
+document.getElementById('app-test-state').dataset.state      // full state as JSON string
+document.getElementById('app-test-state').dataset.imageReady // "true" after first render
+document.getElementById('app-test-state').innerText          // JSON: { state, shareUrl, imageReady }
+```
+
+### `#autoexport-result`
+
+Present after any `?autoexport=` param:
+```javascript
+const result = JSON.parse(document.getElementById('autoexport-result').dataset.result);
+// { success: true, type: "url"|"image"|"json", data: ... }
+```
+
+---
+
+## COMPLETE WORKED EXAMPLE (copy-paste)
+
+Goal: create a 6-month software project schedule and get a share URL.
+
+```javascript
+// JavaScript — runs in browser console or Playwright/Puppeteer
+
 const state = {
-  title: "Q1 Roadmap",
-  startMonth: "0",   // January
-  endMonth: "5",     // June
-  theme: "oscuro",
-  lang: "en",
+  title: "App Launch Plan",
+  startMonth: "0", endMonth: "5",
+  theme: "oscuro", lang: "en",
   projects: [
     {
-      name: "Design",
-      color: "#5B8CC8",
+      name: "Planning", color: "#5B8CC8",
       tasksByRow: [
-        [{ name: "Research", startWeek: 1, duration: 3, isMilestone: false, textPosition: "outside", compact: false, completed: false, color: null }],
-        [{ name: "Wireframes", startWeek: 4, duration: 4, isMilestone: false, textPosition: "outside", compact: false, completed: false, color: null }]
+        [{ name: "Requirements", startWeek: 1, duration: 2, isMilestone: false, textPosition: "outside", compact: false, completed: false, color: null }],
+        [{ name: "Architecture", startWeek: 3, duration: 2, isMilestone: false, textPosition: "outside", compact: false, completed: false, color: null }],
+        [{ name: "Kickoff", startWeek: 5, duration: 1, isMilestone: true, textPosition: "outside", compact: false, completed: false, color: null }]
       ]
     },
     {
-      name: "Development",
-      color: "#2E9E58",
+      name: "Development", color: "#2E9E58",
       tasksByRow: [
-        [{ name: "Backend", startWeek: 5, duration: 8, isMilestone: false, textPosition: "inside", compact: false, completed: false, color: null }],
-        [{ name: "Launch", startWeek: 13, duration: 1, isMilestone: true, textPosition: "outside", compact: false, completed: false, color: null }]
+        [{ name: "Sprint 1", startWeek: 5, duration: 4, isMilestone: false, textPosition: "inside", compact: false, completed: true, color: null }],
+        [{ name: "Sprint 2", startWeek: 9, duration: 4, isMilestone: false, textPosition: "inside", compact: false, completed: false, color: null }],
+        [{ name: "Sprint 3", startWeek: 13, duration: 4, isMilestone: false, textPosition: "inside", compact: false, completed: false, color: null }]
+      ]
+    },
+    {
+      name: "QA & Launch", color: "#C97838",
+      tasksByRow: [
+        [{ name: "Testing", startWeek: 17, duration: 3, isMilestone: false, textPosition: "outside", compact: false, completed: false, color: null }],
+        [{ name: "Launch", startWeek: 20, duration: 1, isMilestone: true, textPosition: "outside", compact: false, completed: false, color: "#B84848" }]
       ]
     }
   ]
 };
 
+// Option A: get URL directly (no browser needed)
 const hash = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
-const url = `https://<host>/index.html#s=${hash}`;
-// Share this URL — it opens the schedule directly in the browser.
+const shareUrl = `https://juangenovardortiz.github.io/cronograma_creator/#s=${hash}`;
+console.log(shareUrl);
+
+// Option B: use the API in browser
+CronogramaAPI.createFromJSON(state);
+const shareUrl2 = CronogramaAPI.getShareUrl();
+const imageDataUrl = await CronogramaAPI.getImageDataUrl();
 ```
 
 ---
 
-## Option 2: Use the JavaScript API in a headless browser
+## VALIDATION
 
-When the page is loaded in a browser (or via Playwright / Puppeteer / browser-use), a global object is available:
-
-```javascript
-window.CronogramaAPI
-```
-
-### Methods
+Always validate before loading to catch errors early:
 
 ```javascript
-// Read the current state
-CronogramaAPI.getState()
-// → { title, startMonth, endMonth, theme, lang, projects: [...] }
-
-// Load a new schedule from a plain object or JSON string
-CronogramaAPI.loadFromJSON(jsonOrStr)
-// or
-CronogramaAPI.setState({ title: "...", projects: [...], ... })
-
-// Get the shareable URL (with #s= hash)
-CronogramaAPI.getShareUrl()
-// → "https://.../index.html#s=<base64>"
-
-// Get a PNG image of the full schedule as a base64 data URL
-await CronogramaAPI.getImageDataUrl()
-// → "data:image/png;base64,..."
-```
-
-### Typical headless agent workflow
-
-```javascript
-// 1. Load the page
-await page.goto('https://<host>/index.html');
-
-// 2. Inject state
-await page.evaluate((state) => {
-  CronogramaAPI.loadFromJSON(state);
-}, myScheduleJSON);
-
-// 3. Get share URL
-const url = await page.evaluate(() => CronogramaAPI.getShareUrl());
-
-// 4. Get image
-const dataUrl = await page.evaluate(async () => await CronogramaAPI.getImageDataUrl());
-// dataUrl is "data:image/png;base64,..." — decode it to get the PNG bytes
+const { valid, errors } = CronogramaAPI.validateState(myState);
+if (!valid) {
+  console.error('Invalid state:', errors);
+  // errors example: ["projects[0].tasksByRow[0][0].startWeek must be integer >= 1"]
+}
 ```
 
 ---
 
-## Option 3: URL autoexport parameters
+## SELF-TEST
 
-Append `?autoexport=url` or `?autoexport=image` to the URL (combined with a `#s=` hash) to trigger
-automatic actions on page load — useful for robots that can visit URLs.
-
-### `?autoexport=url`
-Injects a `<div id="autoexport-result">` at the top of the page containing the shareable URL as:
-- Visible text (monospace bar at top)
-- `data-share-url` attribute on the element
-
-Example:
-```
-https://<host>/index.html?autoexport=url#s=<base64state>
-```
-
-The agent can then scrape `document.getElementById('autoexport-result').dataset.shareUrl`.
-
-### `?autoexport=image`
-After 600ms, downloads the PNG image automatically and places the data URL in:
-- `document.getElementById('autoexport-result').dataset.imageDataUrl`
-- `document.getElementById('autoexport-result').dataset.shareUrl`
-
----
-
-## Option 4: DOM state element (always available)
-
-After every render, the element `#app-test-state` is updated with:
+Verify the API is working correctly:
 
 ```javascript
-document.getElementById('app-test-state').dataset.shareUrl  // current share URL
-document.getElementById('app-test-state').dataset.state     // full state JSON string
+const results = await CronogramaAPI.selfTest();
+// {
+//   success: true,
+//   summary: "9 passed, 0 failed",
+//   passed: [{ test: "createFromJSON", detail: undefined }, ...],
+//   failed: []
+// }
 ```
-
-This lets any DOM-scraping agent read the current state and URL at any time without calling JS functions.
 
 ---
 
-## Notes
+## NOTES
 
-- All months are 0-indexed (0 = January, 11 = December).
-- `startWeek` is 1-indexed: week 1 is the first week of `startMonth`.
-- Tasks in the same inner array of `tasksByRow` are rendered on the same horizontal row and can overlap.
-- The schedule renders entirely client-side with no server calls required.
-- The app auto-saves state to `localStorage` between sessions.
+- `startWeek` is 1-based. Week 1 = first Monday of `startMonth`.
+- Tasks in the same inner array of `tasksByRow` share a horizontal row and can overlap visually.
+- `color: null` on a task means it inherits the project color.
+- The app auto-saves to `localStorage`. Use `?mode=agent` to avoid side-effects.
+- All operations are client-side. No server calls. No authentication required.

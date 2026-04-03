@@ -6,7 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cronograma Interactivo</title>
     <meta name="ai-instructions" content="llms.txt">
+    <meta name="description" content="Interactive Gantt chart builder. AI agents: see /llms.txt for full API documentation.">
+    <link rel="alternate" type="text/plain" href="llms.txt" title="AI Instructions">
     <link rel="stylesheet" href="style.css" id="main-stylesheet">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebAPI",
+      "name": "Cronograma Creator API",
+      "description": "Generate, visualize and export project timelines as Gantt charts. Fully operable by AI agents.",
+      "url": "https://juangenovardortiz.github.io/cronograma_creator/",
+      "documentation": "https://juangenovardortiz.github.io/cronograma_creator/llms.txt",
+      "termsOfService": "https://juangenovardortiz.github.io/cronograma_creator/.well-known/cronograma-ai.json"
+    }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-CQLM5S0TNV"></script>
@@ -259,8 +272,12 @@
     </div>
 
     <footer
-        style="display: flex; justify-content: space-between; width: 95%; max-width: 1600px; padding: 10px 20px; font-size: 0.9em; color: var(--text-color); opacity: 0.8;">
-        <span style="flex: 1;"></span>
+        style="display: flex; justify-content: space-between; align-items: center; width: 95%; max-width: 1600px; padding: 10px 20px; font-size: 0.9em; color: var(--text-color); opacity: 0.8;">
+        <span style="flex: 1;">
+            <a href="llms.txt" target="_blank" rel="noopener"
+               style="color: var(--text-color); text-decoration: none; border: 1px solid currentColor; border-radius: 4px; padding: 2px 8px; font-size: 0.85em; opacity: 0.7;"
+               title="AI Agent API documentation">🤖 AI API</a>
+        </span>
         <span style="flex: 1; text-align: center;">Powered by juangenovardortiz@gmail.com</span>
         <span style="flex: 1; text-align: right;">v.3.0</span>
     </footer>
