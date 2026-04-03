@@ -75,6 +75,49 @@ Cronograma Interactivo
 
 ---
 
+## 🤖 API para Agentes de IA (v3.0)
+
+La web expone una API completa para que agentes de IA puedan crear y exportar cronogramas sin interacción humana.
+
+### Instrucciones completas → `llms.txt`
+
+### Métodos disponibles en el navegador (`window.CronogramaAPI`)
+
+| Método | Descripción |
+|---|---|
+| `CronogramaAPI.getState()` | Devuelve el estado actual como objeto JS |
+| `CronogramaAPI.setState(obj)` | Carga un estado desde objeto JS |
+| `CronogramaAPI.loadFromJSON(str)` | Carga desde JSON string u objeto |
+| `CronogramaAPI.getShareUrl()` | Devuelve la URL con hash `#s=` para compartir |
+| `await CronogramaAPI.getImageDataUrl()` | Devuelve la imagen completa como `data:image/png;base64,...` |
+
+### Parámetros URL de auto-exportación
+
+| Parámetro | Efecto |
+|---|---|
+| `?autoexport=url` | Muestra la URL compartible en la parte superior de la página |
+| `?autoexport=image` | Descarga automáticamente el cronograma como PNG |
+
+Se combina con el hash de estado: `index.html?autoexport=url#s=<base64json>`
+
+### Elemento DOM de estado (siempre disponible)
+
+```javascript
+document.getElementById('app-test-state').dataset.shareUrl  // URL compartible
+document.getElementById('app-test-state').dataset.state     // JSON completo del estado
+```
+
+### Construcción directa de URL (sin navegador)
+
+```javascript
+const hash = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+const url = `https://<host>/index.html#s=${hash}`;
+```
+
+Ver `llms.txt` para el esquema JSON completo.
+
+---
+
 ## 💡 Comportamientos automáticos
 
 - **Auto-guardado local**: El estado se guarda automáticamente en el almacenamiento del navegador (LocalStorage) entre sesiones.

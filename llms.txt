@@ -1,0 +1,203 @@
+# Cronograma Interactivo — AI Agent Instructions
+
+This is an interactive Gantt chart / schedule builder that runs entirely in the browser (static HTML + JS).
+An AI agent can create and share schedules programmatically using the methods below.
+
+---
+
+## Option 1: Construct the share URL directly (no browser needed)
+
+The share URL format is:
+
+```
+https://<host>/index.html#s=<base64(JSON.stringify(state))>
+```
+
+Where `base64` = `btoa(unescape(encodeURIComponent(JSON.stringify(state))))` in JavaScript,
+or standard Base64 URL-safe encoding of the UTF-8 JSON string.
+
+### Full State JSON Schema
+
+```json
+{
+  "title": "My Schedule",
+  "startMonth": "0",
+  "endMonth": "11",
+  "theme": "oscuro",
+  "lang": "en",
+  "projects": [
+    {
+      "name": "Project Name",
+      "color": "#5B8CC8",
+      "tasksByRow": [
+        [
+          {
+            "name": "Task name",
+            "startWeek": 1,
+            "duration": 4,
+            "isMilestone": false,
+            "textPosition": "outside",
+            "compact": false,
+            "completed": false,
+            "color": null
+          }
+        ]
+      ]
+    }
+  ]
+}
+```
+
+### Field reference
+
+| Field | Type | Values / Notes |
+|---|---|---|
+| `title` | string | Schedule title shown in the header |
+| `startMonth` | string (int 0–11) | 0=January, 11=December |
+| `endMonth` | string (int 0–11) | Must be >= startMonth (same year assumed) |
+| `theme` | string | `"oscuro"` `"claro"` `"moderno"` `"gris"` |
+| `lang` | string | `"es"` (Spanish) or `"en"` (English) |
+| `projects[].name` | string | Project group label |
+| `projects[].color` | string | Hex color, e.g. `"#5B8CC8"` |
+| `projects[].tasksByRow` | array of arrays | Each inner array = one visual row; tasks in same row overlap horizontally |
+| `task.startWeek` | int (1-based) | Week 1 = first week of startMonth |
+| `task.duration` | int | Duration in weeks |
+| `task.isMilestone` | bool | `true` renders a diamond instead of a bar |
+| `task.textPosition` | string | `"inside"` or `"outside"` |
+| `task.compact` | bool | Uses smaller row height |
+| `task.completed` | bool | Renders with a strikethrough style |
+| `task.color` | string or null | Override color; `null` inherits project color |
+
+### Color palette (default, cycle order)
+`#5B8CC8` `#8A58B0` `#C97838` `#2E9E58` `#C8A028` `#B84848` `#2A9080` `#3A80B0`
+
+### Minimal working example (JavaScript)
+
+```javascript
+const state = {
+  title: "Q1 Roadmap",
+  startMonth: "0",   // January
+  endMonth: "5",     // June
+  theme: "oscuro",
+  lang: "en",
+  projects: [
+    {
+      name: "Design",
+      color: "#5B8CC8",
+      tasksByRow: [
+        [{ name: "Research", startWeek: 1, duration: 3, isMilestone: false, textPosition: "outside", compact: false, completed: false, color: null }],
+        [{ name: "Wireframes", startWeek: 4, duration: 4, isMilestone: false, textPosition: "outside", compact: false, completed: false, color: null }]
+      ]
+    },
+    {
+      name: "Development",
+      color: "#2E9E58",
+      tasksByRow: [
+        [{ name: "Backend", startWeek: 5, duration: 8, isMilestone: false, textPosition: "inside", compact: false, completed: false, color: null }],
+        [{ name: "Launch", startWeek: 13, duration: 1, isMilestone: true, textPosition: "outside", compact: false, completed: false, color: null }]
+      ]
+    }
+  ]
+};
+
+const hash = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+const url = `https://<host>/index.html#s=${hash}`;
+// Share this URL — it opens the schedule directly in the browser.
+```
+
+---
+
+## Option 2: Use the JavaScript API in a headless browser
+
+When the page is loaded in a browser (or via Playwright / Puppeteer / browser-use), a global object is available:
+
+```javascript
+window.CronogramaAPI
+```
+
+### Methods
+
+```javascript
+// Read the current state
+CronogramaAPI.getState()
+// → { title, startMonth, endMonth, theme, lang, projects: [...] }
+
+// Load a new schedule from a plain object or JSON string
+CronogramaAPI.loadFromJSON(jsonOrStr)
+// or
+CronogramaAPI.setState({ title: "...", projects: [...], ... })
+
+// Get the shareable URL (with #s= hash)
+CronogramaAPI.getShareUrl()
+// → "https://.../index.html#s=<base64>"
+
+// Get a PNG image of the full schedule as a base64 data URL
+await CronogramaAPI.getImageDataUrl()
+// → "data:image/png;base64,..."
+```
+
+### Typical headless agent workflow
+
+```javascript
+// 1. Load the page
+await page.goto('https://<host>/index.html');
+
+// 2. Inject state
+await page.evaluate((state) => {
+  CronogramaAPI.loadFromJSON(state);
+}, myScheduleJSON);
+
+// 3. Get share URL
+const url = await page.evaluate(() => CronogramaAPI.getShareUrl());
+
+// 4. Get image
+const dataUrl = await page.evaluate(async () => await CronogramaAPI.getImageDataUrl());
+// dataUrl is "data:image/png;base64,..." — decode it to get the PNG bytes
+```
+
+---
+
+## Option 3: URL autoexport parameters
+
+Append `?autoexport=url` or `?autoexport=image` to the URL (combined with a `#s=` hash) to trigger
+automatic actions on page load — useful for robots that can visit URLs.
+
+### `?autoexport=url`
+Injects a `<div id="autoexport-result">` at the top of the page containing the shareable URL as:
+- Visible text (monospace bar at top)
+- `data-share-url` attribute on the element
+
+Example:
+```
+https://<host>/index.html?autoexport=url#s=<base64state>
+```
+
+The agent can then scrape `document.getElementById('autoexport-result').dataset.shareUrl`.
+
+### `?autoexport=image`
+After 600ms, downloads the PNG image automatically and places the data URL in:
+- `document.getElementById('autoexport-result').dataset.imageDataUrl`
+- `document.getElementById('autoexport-result').dataset.shareUrl`
+
+---
+
+## Option 4: DOM state element (always available)
+
+After every render, the element `#app-test-state` is updated with:
+
+```javascript
+document.getElementById('app-test-state').dataset.shareUrl  // current share URL
+document.getElementById('app-test-state').dataset.state     // full state JSON string
+```
+
+This lets any DOM-scraping agent read the current state and URL at any time without calling JS functions.
+
+---
+
+## Notes
+
+- All months are 0-indexed (0 = January, 11 = December).
+- `startWeek` is 1-indexed: week 1 is the first week of `startMonth`.
+- Tasks in the same inner array of `tasksByRow` are rendered on the same horizontal row and can overlap.
+- The schedule renders entirely client-side with no server calls required.
+- The app auto-saves state to `localStorage` between sessions.

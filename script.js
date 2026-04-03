@@ -373,6 +373,39 @@ window.addEventListener('load', () => {
 
     // Guardar estado inicial
     setTimeout(saveToHistory, 500); // Un pequeño retraso para asegurar que todo se cargó
+
+    // --- AUTO-EXPORT PARA AGENTES DE IA / AI AGENT AUTO-EXPORT ---
+    // Uso: ?autoexport=url  → muestra la URL de compartir en el DOM
+    //      ?autoexport=image → descarga automáticamente la imagen PNG
+    const _urlParams = new URLSearchParams(location.search);
+    const _autoexport = _urlParams.get('autoexport');
+    if (_autoexport === 'url') {
+        setTimeout(() => {
+            const shareUrl = generateShareUrl();
+            const el = document.createElement('div');
+            el.id = 'autoexport-result';
+            el.dataset.shareUrl = shareUrl;
+            el.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#0d1117;color:#58a6ff;padding:10px 16px;font-family:monospace;font-size:13px;z-index:9999;word-break:break-all;border-bottom:2px solid #58a6ff;';
+            el.textContent = shareUrl;
+            document.body.appendChild(el);
+        }, 600);
+    } else if (_autoexport === 'image') {
+        setTimeout(async () => {
+            const dataUrl = await getImageDataUrl();
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            const title = (document.getElementById('cronograma-title').value || 'cronograma')
+                .replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            a.download = `${title}.png`;
+            a.click();
+            const el = document.getElementById('autoexport-result') || document.createElement('div');
+            el.id = 'autoexport-result';
+            el.dataset.imageDataUrl = dataUrl;
+            el.dataset.shareUrl = generateShareUrl();
+            el.style.display = 'none';
+            document.body.appendChild(el);
+        }, 600);
+    }
 });
 
 function makeModalDraggable(modal) {
@@ -1631,6 +1664,16 @@ function draw() {
 
     const testStateEl = document.getElementById('app-test-state');
     if (testStateEl) {
+        const currentState = {
+            title: document.getElementById('cronograma-title').value,
+            startMonth: document.getElementById('start-month').value,
+            endMonth: document.getElementById('end-month').value,
+            theme: document.getElementById('theme-selector').value,
+            lang: document.getElementById('lang-selector').value,
+            projects: projects
+        };
+        testStateEl.dataset.shareUrl = generateShareUrl();
+        testStateEl.dataset.state = JSON.stringify(currentState);
         testStateEl.innerText = JSON.stringify(projects);
     }
 
@@ -2246,6 +2289,109 @@ function addSimpleTask(projectIndex) {
     updatePreview();
     saveToHistory();
 }
+
+// --- API PARA AGENTES DE IA / AI AGENT API ---
+
+/**
+ * Genera una imagen del cronograma completo y la devuelve como data URL (base64 PNG).
+ * Returns the full schedule as a base64 PNG data URL.
+ */
+async function getImageDataUrl() {
+    if (document.activeElement) document.activeElement.blur();
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const originalTotalWeeks = totalWeeks;
+    ctx.save();
+
+    try {
+        let maxEndWeek = 0;
+        projects.forEach(p => {
+            p.tasksByRow.forEach(row => {
+                row.forEach(task => {
+                    maxEndWeek = Math.max(maxEndWeek, task.startWeek + task.duration);
+                });
+            });
+        });
+
+        const selectorWeeks = calculateTotalWeeks();
+        const exportTotalWeeks = Math.ceil(Math.max(selectorWeeks, maxEndWeek)) + 1;
+        const EXPORT_WEEK_WIDTH = 50;
+        const exportLogicalWidth = projectLabelWidth + (exportTotalWeeks * EXPORT_WEEK_WIDTH);
+
+        let exportLogicalHeight = headerHeight;
+        projects.forEach(p => {
+            exportLogicalHeight += 15;
+            if (p.tasksByRow.length === 0) {
+                exportLogicalHeight += rowHeight;
+            } else {
+                p.tasksByRow.forEach(row => { exportLogicalHeight += getRowHeight(row); });
+            }
+        });
+        exportLogicalHeight += rowHeight;
+
+        const EXPORT_DPR = 2;
+        canvas.width = exportLogicalWidth * EXPORT_DPR;
+        canvas.height = exportLogicalHeight * EXPORT_DPR;
+        ctx.scale(EXPORT_DPR, EXPORT_DPR);
+
+        totalWeeks = exportTotalWeeks;
+        isDrawingForExport = true;
+        draw();
+
+        return canvas.toDataURL('image/png');
+    } finally {
+        ctx.restore();
+        totalWeeks = originalTotalWeeks;
+        isDrawingForExport = false;
+        initCanvasSize();
+        draw();
+    }
+}
+
+/**
+ * API global para interacción programática / headless.
+ * Global API object for programmatic and headless interaction.
+ *
+ * Uso / Usage:
+ *   CronogramaAPI.getState()          → objeto con el estado actual
+ *   CronogramaAPI.setState(obj)        → carga un estado
+ *   CronogramaAPI.getShareUrl()        → URL con hash para compartir
+ *   CronogramaAPI.getImageDataUrl()    → Promise<string> data URL PNG
+ *   CronogramaAPI.loadFromJSON(str)    → carga desde JSON string u objeto
+ */
+window.CronogramaAPI = {
+    version: '3.0',
+
+    getState() {
+        return {
+            title: document.getElementById('cronograma-title').value,
+            startMonth: document.getElementById('start-month').value,
+            endMonth: document.getElementById('end-month').value,
+            theme: document.getElementById('theme-selector').value,
+            lang: document.getElementById('lang-selector').value,
+            projects: JSON.parse(JSON.stringify(projects))
+        };
+    },
+
+    setState(stateObj) {
+        applyState(stateObj);
+        saveToHistory();
+    },
+
+    getShareUrl() {
+        return generateShareUrl();
+    },
+
+    async getImageDataUrl() {
+        return await getImageDataUrl();
+    },
+
+    loadFromJSON(jsonOrStr) {
+        const data = typeof jsonOrStr === 'string' ? JSON.parse(jsonOrStr) : jsonOrStr;
+        applyState(data);
+        saveToHistory();
+    }
+};
 
 // --- FUNCIONALIDAD DE COPIAR IMAGEN ---
 
