@@ -196,7 +196,6 @@ body {
     position: sticky;
     top: 0;
     z-index: 50;
-    pointer-events: none;
 }
 
 .bottom-controls {
@@ -1139,7 +1138,7 @@ footer {
 
 /* --- TOOLTIP DE SEMANA --- */
 .week-tooltip {
-    position: absolute;
+    position: fixed;
     background-color: rgba(30, 30, 30, 0.95);
     color: #E0E0E0;
     border: 1px solid #4A90E2;

@@ -41,6 +41,11 @@ let canvasSidebarBg = '#252526';
 let canvasMutedText = '#999';
 let canvasHighlightBg = 'rgba(255, 255, 255, 0.08)';
 let canvasMonthOverlay = 'rgba(255, 255, 255, 0.05)';
+let todayColTint = 'rgba(255, 193, 7, 0.07)';
+let todayColBorder = 'rgba(255, 193, 7, 0.35)';
+let todayBadgeBg = 'rgba(255, 193, 7, 0.28)';
+let todayBadgeText = '#FFC107';
+let todayWeekNumColor = '#FFD54F';
 let currentTheme = 'oscuro';
 const gridFont = "12px Poppins";
 const projectFont = "bold 16px Poppins";
@@ -103,6 +108,7 @@ const translations = {
         undoTitle: "Deshacer (Ctrl+Z)", redoTitle: "Rehacer (Ctrl+Y)", resetColorTitle: "Restaurar color del proyecto",
         resetProjectColorTitle: "Restaurar color predeterminado del proyecto",
         addTaskAction: "+ Añadir tarea", weekTooltipTo: " al ", acceptBtn: "Aceptar",
+        todayLabel: "HOY",
         confirmChangeColor: "Esto cambiará el color de todas las tareas del proyecto. ¿Deseas continuar?",
         shareBtn: "Compartir", shareBtnTitle: "Compartir enlace", sharePopupTitle: "Compartir enlace"
     },
@@ -137,6 +143,7 @@ const translations = {
         undoTitle: "Undo (Ctrl+Z)", redoTitle: "Redo (Ctrl+Y)", resetColorTitle: "Reset project color",
         resetProjectColorTitle: "Restore project default color",
         addTaskAction: "+ Add task", weekTooltipTo: " to ", acceptBtn: "Accept",
+        todayLabel: "TODAY",
         confirmChangeColor: "This will change the color of all tasks in the project. Do you want to continue?",
         shareBtn: "Share", shareBtnTitle: "Share link", sharePopupTitle: "Share link"
     }
@@ -313,39 +320,46 @@ window.addEventListener('load', () => {
             draw();
         }
 
-        // --- Tooltip de semana ---
-        const weekTooltip = document.getElementById('week-tooltip');
-        const mx = lastMousePosition.x;
-        const my = lastMousePosition.y;
-        const weekRow = headerHeight / 2 + 3; // Zona inferior del header donde están las semanas
-
-        if (my > weekRow && my < headerHeight && mx > projectLabelWidth) {
-            const dpr = ctx ? (ctx.getTransform().a || 1) : 1;
-            const logicalW = canvas.width / dpr;
-            const chartW = logicalW - projectLabelWidth;
-            const weekW = chartW / totalWeeks;
-            const weekIndex = Math.floor((mx - projectLabelWidth) / weekW);
-
-            if (weekIndex >= 0 && weekIndex < totalWeeks) {
-                const startDate = getStartDate();
-                const weekStart = new Date(startDate.getTime() + weekIndex * 7 * 24 * 60 * 60 * 1000);
-                const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
-
-                const fmt = d => String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
-                weekTooltip.textContent = `${fmt(weekStart)}${getTranslation('weekTooltipTo')}${fmt(weekEnd)}`;
-                weekTooltip.style.left = (mx + 12) + 'px';
-                weekTooltip.style.top = (my + 12) + 'px';
-                weekTooltip.classList.add('visible');
-            } else {
-                weekTooltip.classList.remove('visible');
-            }
-        } else {
-            weekTooltip.classList.remove('visible');
-        }
     });
 
+    // --- Tooltip de semana en el header sticky ---
+    const hCanvasEl = document.getElementById('ganttHeaderCanvas');
+    if (hCanvasEl) {
+        hCanvasEl.addEventListener('mousemove', e => {
+            const weekTooltip = document.getElementById('week-tooltip');
+            const hRect = hCanvasEl.getBoundingClientRect();
+            const mx = e.clientX - hRect.left;
+            const my = e.clientY - hRect.top;
+            const weekRow = headerHeight / 2 + 3;
+
+            if (my > weekRow && mx > projectLabelWidth) {
+                const dpr = window.devicePixelRatio || 1;
+                const logicalW = hCanvasEl.width / dpr;
+                const chartW = logicalW - projectLabelWidth;
+                const weekW = chartW / totalWeeks;
+                const weekIndex = Math.floor((mx - projectLabelWidth) / weekW);
+
+                if (weekIndex >= 0 && weekIndex < totalWeeks) {
+                    const startDate = getStartDate();
+                    const weekStart = new Date(startDate.getTime() + weekIndex * 7 * 24 * 60 * 60 * 1000);
+                    const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+                    const fmt = d => String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+                    weekTooltip.textContent = `${fmt(weekStart)}${getTranslation('weekTooltipTo')}${fmt(weekEnd)}`;
+                    weekTooltip.style.left = (e.clientX + 12) + 'px';
+                    weekTooltip.style.top = (e.clientY + 12) + 'px';
+                    weekTooltip.classList.add('visible');
+                    return;
+                }
+            }
+            weekTooltip.classList.remove('visible');
+        });
+        hCanvasEl.addEventListener('mouseleave', () => {
+            document.getElementById('week-tooltip').classList.remove('visible');
+        });
+    }
+
     // Eliminamos el proyecto que se crea por defecto
-    // addProject(); 
+    // addProject();
     updatePreview();
 
     makeModalDraggable(document.getElementById('task-modal'));
@@ -602,6 +616,11 @@ function applyTheme(theme) {
         canvasMutedText = '#666';
         canvasHighlightBg = 'rgba(0, 0, 0, 0.05)';
         canvasMonthOverlay = 'rgba(0, 0, 0, 0.02)';
+        todayColTint = 'rgba(245, 158, 11, 0.09)';
+        todayColBorder = 'rgba(245, 158, 11, 0.50)';
+        todayBadgeBg = 'rgba(245, 158, 11, 0.20)';
+        todayBadgeText = '#92400E';
+        todayWeekNumColor = '#B45309';
     } else if (theme === 'moderno') {
         textColor = '#f1f5f9';
         gridColor = '#334155';
@@ -611,6 +630,11 @@ function applyTheme(theme) {
         canvasMutedText = '#94a3b8';
         canvasHighlightBg = 'rgba(255, 255, 255, 0.05)';
         canvasMonthOverlay = 'rgba(255, 255, 255, 0.05)';
+        todayColTint = 'rgba(56, 189, 248, 0.07)';
+        todayColBorder = 'rgba(56, 189, 248, 0.35)';
+        todayBadgeBg = 'rgba(56, 189, 248, 0.20)';
+        todayBadgeText = '#38BDF8';
+        todayWeekNumColor = '#7DD3FC';
     } else if (theme === 'gris') {
         textColor = '#111827';
         gridColor = '#d1d5db';
@@ -620,6 +644,11 @@ function applyTheme(theme) {
         canvasMutedText = '#4b5563';
         canvasHighlightBg = 'rgba(0, 0, 0, 0.05)';
         canvasMonthOverlay = 'rgba(0, 0, 0, 0.03)';
+        todayColTint = 'rgba(79, 70, 229, 0.07)';
+        todayColBorder = 'rgba(79, 70, 229, 0.40)';
+        todayBadgeBg = 'rgba(79, 70, 229, 0.15)';
+        todayBadgeText = '#3730A3';
+        todayWeekNumColor = '#4338CA';
     } else {
         // Oscuro (Default)
         textColor = '#E0E0E0';
@@ -630,6 +659,11 @@ function applyTheme(theme) {
         canvasMutedText = '#999';
         canvasHighlightBg = 'rgba(255, 255, 255, 0.08)';
         canvasMonthOverlay = 'rgba(255, 255, 255, 0.05)';
+        todayColTint = 'rgba(255, 193, 7, 0.07)';
+        todayColBorder = 'rgba(255, 193, 7, 0.35)';
+        todayBadgeBg = 'rgba(255, 193, 7, 0.28)';
+        todayBadgeText = '#FFC107';
+        todayWeekNumColor = '#FFD54F';
     }
 }
 
@@ -1690,6 +1724,22 @@ function draw() {
     const dprVal = window.devicePixelRatio || 1;
     ctx.fillRect(0, 0, projectLabelWidth, canvas.height / dprVal);
 
+    // Columna de semana actual (fondo sutil sobre el área de tareas)
+    const _todayForDraw = new Date();
+    const _startDateForDraw = getStartDate();
+    const _daysDiff = (_todayForDraw - _startDateForDraw) / (1000 * 60 * 60 * 24);
+    const todayWeekIndex = Math.floor(_daysDiff / 7);
+    if (todayWeekIndex >= 0 && todayWeekIndex < totalWeeks) {
+        const _dpr = ctx.getTransform().a || 1;
+        const _logicalW = canvas.width / _dpr;
+        const _logicalH = canvas.height / _dpr;
+        const _chartW = _logicalW - projectLabelWidth;
+        const _weekW = _chartW / totalWeeks;
+        const _weekX = projectLabelWidth + todayWeekIndex * _weekW;
+        ctx.fillStyle = todayColTint;
+        ctx.fillRect(_weekX, headerHeight, _weekW, _logicalH - headerHeight);
+    }
+
     drawGrid();
     drawProjects();
 
@@ -1742,6 +1792,11 @@ function drawGrid() {
     let monthStartX = projectLabelWidth;
     let weeksInCurrentMonth = 0;
 
+    // Calcular índice de semana actual
+    const todayGrid = new Date();
+    const gridDaysDiff = (todayGrid - startDate) / (1000 * 60 * 60 * 24);
+    const gridTodayWeekIndex = Math.floor(gridDaysDiff / 7);
+
     for (let i = 0; i < totalWeeks; i++) {
         const weekDate = new Date(startDate.getTime() + (i * 7 + 3) * 24 * 60 * 60 * 1000);
         const currentMonth = weekDate.getMonth();
@@ -1770,10 +1825,26 @@ function drawGrid() {
         ctx.lineTo(x, canvas.height / (window.devicePixelRatio || 1));
         ctx.stroke();
 
-        ctx.fillStyle = canvasMutedText;
-        ctx.font = gridFont;
-        ctx.textAlign = 'center';
-        ctx.fillText(`${getTranslation('weekPrefix')}${i + 1}`, x + weekWidth / 2, headerHeight / 2 + 15);
+        if (i === gridTodayWeekIndex) {
+            // Fondo de acento en la celda de semana actual
+            ctx.fillStyle = todayBadgeBg;
+            ctx.fillRect(x, headerHeight / 2, weekWidth, headerHeight / 2);
+            // Badge "HOY" / "TODAY"
+            ctx.fillStyle = todayBadgeText;
+            ctx.font = 'bold 8px Poppins';
+            ctx.textAlign = 'center';
+            ctx.fillText(getTranslation('todayLabel'), x + weekWidth / 2, headerHeight / 2 + 9);
+            // Número de semana con acento
+            ctx.fillStyle = todayWeekNumColor;
+            ctx.font = 'bold ' + gridFont;
+            ctx.textAlign = 'center';
+            ctx.fillText(`${getTranslation('weekPrefix')}${i + 1}`, x + weekWidth / 2, headerHeight / 2 + 22);
+        } else {
+            ctx.fillStyle = canvasMutedText;
+            ctx.font = gridFont;
+            ctx.textAlign = 'center';
+            ctx.fillText(`${getTranslation('weekPrefix')}${i + 1}`, x + weekWidth / 2, headerHeight / 2 + 15);
+        }
     }
 
     if (lastMonth !== -1) {
