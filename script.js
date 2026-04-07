@@ -2426,7 +2426,7 @@ async function getImageDataUrl() {
         });
 
         const selectorWeeks = calculateTotalWeeks();
-        const exportTotalWeeks = Math.max(selectorWeeks, Math.ceil(maxEndWeek));
+        const exportTotalWeeks = selectorWeeks;
         const EXPORT_WEEK_WIDTH = 50;
         const exportLogicalWidth = projectLabelWidth + (exportTotalWeeks * EXPORT_WEEK_WIDTH);
 
@@ -2664,7 +2664,7 @@ async function copyChartToClipboard() {
         });
 
         const selectorWeeks = calculateTotalWeeks();
-        const exportTotalWeeks = Math.max(selectorWeeks, Math.ceil(maxEndWeek));
+        const exportTotalWeeks = selectorWeeks;
 
         const EXPORT_WEEK_WIDTH = 50;
         const exportLogicalWidth = projectLabelWidth + (exportTotalWeeks * EXPORT_WEEK_WIDTH);
