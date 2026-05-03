@@ -893,9 +893,23 @@ canvas {
 }
 
 .nice-button.icon-button {
-    padding: 5px 10px;
-    font-size: 1.2rem;
+    padding: 7px 11px;
+    font-size: 1.15rem;
     line-height: 1;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.06s ease;
+}
+
+.nice-button.icon-button:hover {
+    background-color: var(--input-bg);
+    border-color: var(--primary-color);
+}
+
+.nice-button.icon-button:active {
+    transform: scale(0.96);
 }
 
 .icon-btn-wrapper {
@@ -1670,16 +1684,17 @@ body:not(.sidebar-collapsed) .cloud-sidebar-toggle svg {
     justify-content: center;
     gap: 8px;
     width: 100%;
-    padding: 9px 12px;
-    background: transparent;
-    border: 1px dashed var(--sidebar-border);
-    border-radius: 6px;
+    padding: 10px 12px;
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
     color: var(--text-color);
     cursor: pointer;
     font-family: inherit;
     font-size: 0.95em;
     font-weight: 500;
-    opacity: 0.75;
+    opacity: 1;
+    transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.06s ease;
     box-shadow: none;
     transition: opacity 0.12s, background-color 0.12s, border-color 0.12s;
 }
@@ -1690,10 +1705,13 @@ body:not(.sidebar-collapsed) .cloud-sidebar-toggle svg {
 }
 
 .sidebar-add-category-btn:hover {
-    opacity: 1;
-    background-color: var(--sidebar-hover);
-    border-color: var(--sidebar-accent);
+    background-color: var(--input-bg);
+    border-color: var(--primary-color);
     color: var(--text-color);
+}
+
+.sidebar-add-category-btn:active {
+    transform: scale(0.98);
 }
 
 .sidebar-add-category-btn svg {
