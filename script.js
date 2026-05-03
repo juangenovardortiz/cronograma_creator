@@ -21,7 +21,37 @@ let taskHitboxes = [];
 let projectHitboxes = [];
 let addTaskHitboxes = []; // Hitboxes para los botones de 'Añadir Tarea'
 let isDrawingForExport = false; // Flag para el dibujado de exportación
+let exportRightPadding = 0; // Píxeles extra a la derecha en exportación para que las etiquetas de hitos no se corten
 const resizeHandleWidth = 15; // Ancho del área de redimensión
+
+// Constantes del layout de cabecera de proyecto (compartidas por draw, init y exportación)
+// Project header layout constants (shared by draw, init and export paths)
+const PROJ_HEADER_TOP_PAD = 14;
+const PROJ_HEADER_BOTTOM_PAD = 14;
+const PROJ_HEADER_LINE_HEIGHT = 20;
+const PROJ_HEADER_NAME_BTN_GAP = 12;
+const PROJ_HEADER_BTN_HEIGHT = 26;
+const PROJ_HEADER_BTN_WIDTH = 130;
+const PROJ_HEADER_BOTTOM_MARGIN = 10; // pequeño aire bajo el último proyecto
+
+// Calcula la altura interna de un proyecto reproduciendo el layout real de drawProjects.
+// Si includeButton es true se reserva espacio para el botón "+ Añadir tarea" (no en exportación).
+// Computes a project's inner height matching drawProjects' real layout.
+function computeProjectInnerHeight(project, includeButton) {
+    ctx.save();
+    ctx.font = projectFont;
+    const maxNameW = projectLabelWidth - 30;
+    const lines = wrapText(ctx, project.name, maxNameW);
+    ctx.restore();
+    const nameH = lines.length * PROJ_HEADER_LINE_HEIGHT;
+    const headerH = PROJ_HEADER_TOP_PAD + nameH +
+        (includeButton ? PROJ_HEADER_NAME_BTN_GAP + PROJ_HEADER_BTN_HEIGHT : 0) +
+        PROJ_HEADER_BOTTOM_PAD;
+    let tasksH = 0;
+    project.tasksByRow.forEach(row => { tasksH += getRowHeight(row); });
+    const tasksBlockH = tasksH > 0 ? PROJ_HEADER_TOP_PAD + tasksH + PROJ_HEADER_BOTTOM_PAD : 0;
+    return Math.max(headerH, tasksBlockH);
+}
 
 const colorPalette = ['#6C8EBF', '#9B7EB8', '#D4915E', '#6BAF7B', '#C4A95B', '#5BA8A0', '#7EA3C9', '#B07DA5', '#C4956E', '#8BB5A2'];
 let nextColorIndex = 0;
@@ -1405,14 +1435,10 @@ function initCanvasSize() {
 
     let totalHeight = headerHeight;
     projects.forEach(p => {
-        totalHeight += 15; // Espacio superior del proyecto
-        p.tasksByRow.forEach(row => {
-            totalHeight += getRowHeight(row);
-        });
-        totalHeight += 40; // Espacio para el botón '+ Añadir Tarea' y su padding
+        totalHeight += computeProjectInnerHeight(p, true); // incluye botón "+ Añadir tarea"
     });
 
-    const finalHeight = totalHeight + rowHeight;
+    const finalHeight = totalHeight + PROJ_HEADER_BOTTOM_MARGIN;
     // Forzar el estilo CSS primero para que el documento muestre la barra de scroll si es necesaria
     canvas.style.height = `${finalHeight}px`;
 
@@ -1857,7 +1883,8 @@ function draw() {
         const _dpr = ctx.getTransform().a || 1;
         const _logicalW = canvas.width / _dpr;
         const _logicalH = canvas.height / _dpr;
-        const _chartW = _logicalW - projectLabelWidth;
+        const _chartW = _logicalW - projectLabelWidth -
+            (isDrawingForExport ? exportRightPadding : 0);
         const _weekW = _chartW / totalWeeks;
         const _weekX = projectLabelWidth + todayWeekIndex * _weekW;
         ctx.fillStyle = todayColTint;
@@ -1908,7 +1935,12 @@ function drawGrid() {
 
     const dpr = ctx.getTransform().a || 1;
     const logicalCanvasWidth = canvas.width / dpr;
-    const chartWidth = logicalCanvasWidth - projectLabelWidth;
+    // En exportación reservamos un margen extra a la derecha para etiquetas de hitos
+    // que NO debe contar como ancho del chart ni alterar el weekWidth.
+    // In export we reserve extra right margin for milestone labels that must NOT
+    // count toward chart width nor affect weekWidth.
+    const chartWidth = logicalCanvasWidth - projectLabelWidth -
+        (isDrawingForExport ? exportRightPadding : 0);
     const weekWidth = chartWidth / totalWeeks;
     const startDate = getStartDate();
 
@@ -2168,7 +2200,12 @@ function drawTaskBar(task, project, y, projectIndex, rowIndex, taskIndex) {
 
     const dpr = ctx.getTransform().a || 1;
     const logicalCanvasWidth = canvas.width / dpr;
-    const chartWidth = logicalCanvasWidth - projectLabelWidth;
+    // En exportación reservamos un margen a la derecha para etiquetas de hitos
+    // que NO debe afectar al ancho del chart ni al weekWidth.
+    // In export we reserve a right margin for milestone labels that must NOT
+    // affect chart width nor weekWidth.
+    const exportPad = isDrawingForExport ? exportRightPadding : 0;
+    const chartWidth = logicalCanvasWidth - projectLabelWidth - exportPad;
     const weekWidth = chartWidth / totalWeeks;
     const isCompact = !!task.compact;
     const barHeight = isCompact ? 14 : 30;
@@ -2194,10 +2231,13 @@ function drawTaskBar(task, project, y, projectIndex, rowIndex, taskIndex) {
     const isDragging = draggingTask && draggingTask.projectIndex === projectIndex && draggingTask.rowIndex === rowIndex && draggingTask.taskIndex === taskIndex;
     const isResizing = resizingTask && resizingTask.projectIndex === projectIndex && resizingTask.rowIndex === rowIndex && resizingTask.taskIndex === taskIndex;
 
-    // Aplicar clipping al área del gráfico para que las barras nunca invadan la zona de etiquetas
+    // Clip al área del gráfico (incluyendo el margen extra de exportación, donde
+    // pueden extenderse las etiquetas de hitos), evitando invadir la zona de etiquetas izquierda.
+    // Clip to the chart area (including the export right margin where milestone labels
+    // may extend), preventing bleed into the left label column.
     ctx.save();
     ctx.beginPath();
-    ctx.rect(projectLabelWidth, headerHeight, chartWidth, canvas.height / dpr - headerHeight);
+    ctx.rect(projectLabelWidth, headerHeight, chartWidth + exportPad, canvas.height / dpr - headerHeight);
     ctx.clip();
 
     ctx.fillStyle = task.completed ? '#666666' : (task.color || project.color);
@@ -2620,30 +2660,20 @@ async function getImageDataUrl() {
         const selectorWeeks = calculateTotalWeeks();
         const exportTotalWeeks = selectorWeeks;
         const EXPORT_WEEK_WIDTH = 50;
-        const exportLogicalWidth = projectLabelWidth + (exportTotalWeeks * EXPORT_WEEK_WIDTH);
+        const chartLogicalWidth = exportTotalWeeks * EXPORT_WEEK_WIDTH;
 
-        // Calcular altura proyecto a proyecto reproduciendo el nuevo layout
-        // (cabecera = nombre + paddings, sin botón en exportación).
-        // Compute per-project height matching the new layout
-        // (header = name + paddings, no button in export).
+        // Calcular margen extra a la derecha para que las etiquetas de hitos
+        // (textPosition='outside') no queden cortadas en el borde del chart.
+        // Compute extra right margin so milestone labels do not get clipped at chart edge.
+        exportRightPadding = computeExportRightPadding(exportTotalWeeks, EXPORT_WEEK_WIDTH);
+
+        const exportLogicalWidth = projectLabelWidth + chartLogicalWidth + exportRightPadding;
+
+        // Altura proyecto a proyecto reproduciendo el layout real (sin botón en exportación)
+        // Per-project height matching the real layout (no button in export)
         let exportLogicalHeight = headerHeight;
-        ctx.save();
-        ctx.font = projectFont;
-        const _exportTopPad = 14;
-        const _exportBottomPad = 14;
-        const _exportLineHeight = 20;
-        const _exportMaxTextW = projectLabelWidth - 30;
-        projects.forEach(p => {
-            const _exportLines = wrapText(ctx, p.name, _exportMaxTextW);
-            const _nameH = _exportLines.length * _exportLineHeight;
-            const _headerH = _exportTopPad + _nameH + _exportBottomPad;
-            let _tasksH = 0;
-            p.tasksByRow.forEach(row => { _tasksH += getRowHeight(row); });
-            const _tasksBlockH = _tasksH > 0 ? _exportTopPad + _tasksH + _exportBottomPad : 0;
-            exportLogicalHeight += Math.max(_headerH, _tasksBlockH);
-        });
-        ctx.restore();
-        exportLogicalHeight += rowHeight;
+        projects.forEach(p => { exportLogicalHeight += computeProjectInnerHeight(p, false); });
+        exportLogicalHeight += PROJ_HEADER_BOTTOM_MARGIN;
 
         const EXPORT_DPR = 2;
         canvas.width = exportLogicalWidth * EXPORT_DPR;
@@ -2659,9 +2689,37 @@ async function getImageDataUrl() {
         ctx.restore();
         totalWeeks = originalTotalWeeks;
         isDrawingForExport = false;
+        exportRightPadding = 0;
         initCanvasSize();
         draw();
     }
+}
+
+// Calcula cuánto sobresalen las etiquetas de hitos (textPosition='outside') más allá
+// del último día del chart, devolviendo el margen extra necesario en píxeles lógicos.
+// Computes how much milestone labels (textPosition='outside') overflow past the chart
+// right edge, returning the extra logical-pixel margin needed.
+function computeExportRightPadding(exportTotalWeeks, weekW) {
+    const chartLimit = exportTotalWeeks * weekW;
+    let maxOverflow = 0;
+    ctx.save();
+    projects.forEach(p => {
+        p.tasksByRow.forEach(row => {
+            row.forEach(task => {
+                if (!task.isMilestone) return;
+                const isCompact = !!task.compact;
+                ctx.font = isCompact ? compactTaskFont : taskFont;
+                const diamondSize = isCompact ? 12 : 20;
+                const textW = ctx.measureText(task.name).width;
+                const labelStartX = (task.startWeek - 1) * weekW + diamondSize + 5;
+                const labelEndX = labelStartX + textW;
+                const overflow = labelEndX - chartLimit;
+                if (overflow > maxOverflow) maxOverflow = overflow;
+            });
+        });
+    });
+    ctx.restore();
+    return maxOverflow > 0 ? Math.ceil(maxOverflow + 12) : 0;
 }
 
 /**
@@ -2871,20 +2929,18 @@ async function copyChartToClipboard() {
         const exportTotalWeeks = selectorWeeks;
 
         const EXPORT_WEEK_WIDTH = 50;
-        const exportLogicalWidth = projectLabelWidth + (exportTotalWeeks * EXPORT_WEEK_WIDTH);
+        const chartLogicalWidth = exportTotalWeeks * EXPORT_WEEK_WIDTH;
 
+        // Margen extra a la derecha para que las etiquetas de hitos no se corten.
+        // Extra right margin so milestone labels do not get clipped.
+        exportRightPadding = computeExportRightPadding(exportTotalWeeks, EXPORT_WEEK_WIDTH);
+        const exportLogicalWidth = projectLabelWidth + chartLogicalWidth + exportRightPadding;
+
+        // Altura usando el layout real (sin botón en exportación)
+        // Height using the real layout (no button in export)
         let exportLogicalHeight = headerHeight;
-        projects.forEach(p => {
-            exportLogicalHeight += 15;
-            if (p.tasksByRow.length === 0) {
-                exportLogicalHeight += rowHeight;
-            } else {
-                p.tasksByRow.forEach(row => {
-                    exportLogicalHeight += getRowHeight(row);
-                });
-            }
-        });
-        exportLogicalHeight += rowHeight;
+        projects.forEach(p => { exportLogicalHeight += computeProjectInnerHeight(p, false); });
+        exportLogicalHeight += PROJ_HEADER_BOTTOM_MARGIN;
 
         // 3. Preparar el canvas para la exportación en alta resolución (DPR=2)
         const EXPORT_DPR = 2;
@@ -2943,6 +2999,7 @@ async function copyChartToClipboard() {
         ctx.restore(); // Restaura el contexto, eliminando la escala de exportación
         totalWeeks = originalTotalWeeks;
         isDrawingForExport = false;
+        exportRightPadding = 0;
         initCanvasSize(); // Re-inicializa el canvas a las dimensiones de la pantalla
         draw(); // Vuelve a dibujar la vista normal
     }
