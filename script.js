@@ -1442,18 +1442,28 @@ function handleCanvasMouseDown(e) {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    for (const hitbox of projectHitboxes) {
-        if (x >= hitbox.x && x <= hitbox.x + hitbox.width && y >= hitbox.y && y <= hitbox.y + hitbox.height) {
-            draggingProject = {
-                projectIndex: hitbox.projectIndex,
-                offsetY: y - hitbox.y,
-                startY: y,
-                didMove: false,
-                targetIndex: hitbox.projectIndex
-            };
-            canvas.style.cursor = 'grabbing';
-            e.preventDefault();
-            return;
+    // Si el clic cae sobre el botón "+ Añadir tarea", no iniciar el arrastre del proyecto:
+    // se gestiona como acción de añadir tarea en mouseup.
+    // If the click lands on the "+ Add task" button, do not start the project drag:
+    // it is handled as an add-task action on mouseup.
+    const onAddTaskBtn = addTaskHitboxes.some(hb =>
+        x >= hb.x && x <= hb.x + hb.width && y >= hb.y && y <= hb.y + hb.height
+    );
+
+    if (!onAddTaskBtn) {
+        for (const hitbox of projectHitboxes) {
+            if (x >= hitbox.x && x <= hitbox.x + hitbox.width && y >= hitbox.y && y <= hitbox.y + hitbox.height) {
+                draggingProject = {
+                    projectIndex: hitbox.projectIndex,
+                    offsetY: y - hitbox.y,
+                    startY: y,
+                    didMove: false,
+                    targetIndex: hitbox.projectIndex
+                };
+                canvas.style.cursor = 'grabbing';
+                e.preventDefault();
+                return;
+            }
         }
     }
 
@@ -1999,80 +2009,125 @@ function drawProjects() {
             ctx.globalAlpha = 0.3;
         }
 
-        y += 15;
-
-        // Dibujar siempre el nombre del proyecto y sus iconos
-        let projectHeight = 0;
-        project.tasksByRow.forEach(row => { projectHeight += getRowHeight(row); });
-        const projectCenterY = y + projectHeight / 2;
+        // --- Layout del proyecto: cabecera (nombre + botón) en columna izquierda,
+        //     tareas en la columna derecha. La altura del proyecto = max(cabecera, tareas).
+        // --- Project layout: header (name + button) on left column, tasks on right.
+        //     Project height = max(headerBlock, tasksBlock).
         const textX = 20;
         const maxTextWidth = projectLabelWidth - textX - 10;
+        const topPad = 14;
+        const bottomPad = 14;
+        const lineHeight = 20;
+        const nameToBtnGap = 12;
+        const buttonHeight = 26;
+        const buttonWidth = 130;
+
+        ctx.font = projectFont;
+        const lines = wrapText(ctx, project.name, maxTextWidth);
+        const nameBlockH = lines.length * lineHeight;
+
+        const includeButton = !isDrawingForExport;
+        const headerBlockH = topPad + nameBlockH +
+            (includeButton ? nameToBtnGap + buttonHeight : 0) + bottomPad;
+
+        let tasksTotalH = 0;
+        project.tasksByRow.forEach(row => { tasksTotalH += getRowHeight(row); });
+        const tasksBlockH = tasksTotalH > 0 ? topPad + tasksTotalH + bottomPad : 0;
+
+        const projectInnerH = Math.max(headerBlockH, tasksBlockH);
+
+        // Fondo tintado de la columna izquierda con el color del proyecto
+        // Tinted background for the left column using the project color
+        ctx.fillStyle = hexToRgba(project.color, 0.07);
+        ctx.fillRect(0, projectStartY, projectLabelWidth, projectInnerH);
+
+        // Nombre del proyecto centrado horizontal y verticalmente en la columna izquierda
+        // Project name centered horizontally and vertically in the left column
+        const headerContentH = nameBlockH +
+            (includeButton ? nameToBtnGap + buttonHeight : 0);
+        const headerContentY = projectStartY + (projectInnerH - headerContentH) / 2;
 
         ctx.fillStyle = project.color;
         ctx.font = projectFont;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-
-        // Dividir el nombre en líneas si excede el ancho disponible
-        const lines = wrapText(ctx, project.name, maxTextWidth);
-        const lineHeight = 18;
-        // Si no hay tareas, centrar el texto en el espacio de margen superior
-        const baseCenterY = (project.tasksByRow.length > 0) ? projectCenterY : y + (15 / 2);
-        const textBlockTop = baseCenterY - (lines.length * lineHeight) / 2;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        const nameY = headerContentY;
+        const centerX = projectLabelWidth / 2;
         lines.forEach((line, i) => {
-            ctx.fillText(line, textX, textBlockTop + i * lineHeight + lineHeight / 2);
+            ctx.fillText(line, centerX, nameY + i * lineHeight);
         });
 
+        // Botón "+ Añadir tarea" centrado debajo del nombre
+        // "+ Add task" button centered below the name
+        if (includeButton) {
+            const btnY = nameY + nameBlockH + nameToBtnGap;
+            const btnX = (projectLabelWidth - buttonWidth) / 2;
+            ctx.fillStyle = canvasBodyBg;
+            ctx.strokeStyle = hexToRgba(project.color, 0.35);
+            ctx.lineWidth = 1;
+            roundRect(ctx, btnX, btnY, buttonWidth, buttonHeight, 13, true, true);
+
+            ctx.fillStyle = textColor;
+            ctx.font = '12px Poppins';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(getTranslation('addTaskAction'), btnX + buttonWidth / 2, btnY + buttonHeight / 2);
+
+            addTaskHitboxes.push({
+                x: btnX,
+                y: btnY,
+                width: buttonWidth,
+                height: buttonHeight,
+                projectIndex
+            });
+        }
+
+        // Dibujar las filas de tareas en la columna derecha, alineadas al top del proyecto
+        // Draw task rows on the right column, aligned to the top of the project
         const isDropTargetProject = draggingTask && draggingTask.didMove && draggingTask.dropTarget?.projectIndex === projectIndex;
         const dropRowIndex = isDropTargetProject ? draggingTask.dropTarget.rowIndex : -1;
         const isMerge = isDropTargetProject && draggingTask.dropTarget?.merge;
 
+        let rowY = projectStartY + topPad;
         const numRows = project.tasksByRow.length;
         for (let i = 0; i <= numRows; i++) {
             // Placeholder de inserción (nueva fila) — solo cuando NO es merge
             if (isDropTargetProject && !isMerge && i === dropRowIndex) {
-                drawPlaceholder(y);
-                y += rowHeight;
+                drawPlaceholder(rowY);
+                rowY += rowHeight;
             }
 
             if (i < numRows) {
                 const currentRowHeight = getRowHeight(project.tasksByRow[i]);
                 // Highlight de merge — resaltar la fila destino
                 if (isDropTargetProject && isMerge && i === dropRowIndex) {
-                    drawMergeHighlight(y);
+                    drawMergeHighlight(rowY);
                 }
                 project.tasksByRow[i].forEach((task, taskIndex) => {
-                    drawTaskBar(task, project, y + currentRowHeight / 2, projectIndex, i, taskIndex);
+                    drawTaskBar(task, project, rowY + currentRowHeight / 2, projectIndex, i, taskIndex);
                 });
-                y += currentRowHeight;
+                rowY += currentRowHeight;
             }
         }
 
-        // Dibujar botón de 'Añadir Tarea'
-        if (!isDrawingForExport) {
-            const buttonY = y + 10;
-            const buttonHeight = 25;
+        // Avanzar y al final del proyecto (la mayor entre cabecera y bloque de tareas)
+        // Advance y to the end of the project (max of header and tasks block)
+        y = projectStartY + projectInnerH;
 
-            ctx.fillStyle = canvasHeaderBg;
+        // Línea fina divisoria entre proyectos (no después del último)
+        // Thin divider line between projects (skipped after the last one)
+        if (projectIndex < projects.length - 1) {
+            const dpr = ctx.getTransform().a || 1;
+            const logicalCanvasWidth = canvas.width / dpr;
+            ctx.save();
             ctx.strokeStyle = gridColor;
             ctx.lineWidth = 1;
-            roundRect(ctx, projectLabelWidth, buttonY, 120, buttonHeight, 5, true, true);
-
-            ctx.fillStyle = textColor;
-            ctx.font = '13px Poppins';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(getTranslation('addTaskAction'), projectLabelWidth + 10, buttonY + buttonHeight / 2);
-
-            addTaskHitboxes.push({
-                x: projectLabelWidth,
-                y: buttonY,
-                width: 120,
-                height: buttonHeight,
-                projectIndex
-            });
-
-            y += buttonHeight + 15; // Espacio extra después del botón
+            ctx.globalAlpha = 0.6;
+            ctx.beginPath();
+            ctx.moveTo(0, y + 0.5);
+            ctx.lineTo(logicalCanvasWidth, y + 0.5);
+            ctx.stroke();
+            ctx.restore();
         }
 
         const projectHitbox = {
@@ -2402,6 +2457,27 @@ function truncateText(ctx, text, maxWidth) {
     return truncated + "...";
 }
 
+// Convierte un color (hex #RRGGBB / #RGB / rgb / nombre css) a rgba con alfa dado.
+// Converts a color (hex #RRGGBB / #RGB / rgb / css name) to rgba with given alpha.
+function hexToRgba(color, alpha) {
+    if (!color) return `rgba(128,128,128,${alpha})`;
+    let c = String(color).trim();
+    if (c.startsWith('rgb')) {
+        const nums = c.match(/[\d.]+/g);
+        if (nums && nums.length >= 3) {
+            return `rgba(${nums[0]}, ${nums[1]}, ${nums[2]}, ${alpha})`;
+        }
+        return c;
+    }
+    if (c.startsWith('#')) c = c.slice(1);
+    if (c.length === 3) c = c.split('').map(ch => ch + ch).join('');
+    if (c.length !== 6) return `rgba(128,128,128,${alpha})`;
+    const r = parseInt(c.slice(0, 2), 16);
+    const g = parseInt(c.slice(2, 4), 16);
+    const b = parseInt(c.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
     ctx.beginPath();
     ctx.moveTo(x + radius, y);
@@ -2546,15 +2622,27 @@ async function getImageDataUrl() {
         const EXPORT_WEEK_WIDTH = 50;
         const exportLogicalWidth = projectLabelWidth + (exportTotalWeeks * EXPORT_WEEK_WIDTH);
 
+        // Calcular altura proyecto a proyecto reproduciendo el nuevo layout
+        // (cabecera = nombre + paddings, sin botón en exportación).
+        // Compute per-project height matching the new layout
+        // (header = name + paddings, no button in export).
         let exportLogicalHeight = headerHeight;
+        ctx.save();
+        ctx.font = projectFont;
+        const _exportTopPad = 14;
+        const _exportBottomPad = 14;
+        const _exportLineHeight = 20;
+        const _exportMaxTextW = projectLabelWidth - 30;
         projects.forEach(p => {
-            exportLogicalHeight += 15;
-            if (p.tasksByRow.length === 0) {
-                exportLogicalHeight += rowHeight;
-            } else {
-                p.tasksByRow.forEach(row => { exportLogicalHeight += getRowHeight(row); });
-            }
+            const _exportLines = wrapText(ctx, p.name, _exportMaxTextW);
+            const _nameH = _exportLines.length * _exportLineHeight;
+            const _headerH = _exportTopPad + _nameH + _exportBottomPad;
+            let _tasksH = 0;
+            p.tasksByRow.forEach(row => { _tasksH += getRowHeight(row); });
+            const _tasksBlockH = _tasksH > 0 ? _exportTopPad + _tasksH + _exportBottomPad : 0;
+            exportLogicalHeight += Math.max(_headerH, _tasksBlockH);
         });
+        ctx.restore();
         exportLogicalHeight += rowHeight;
 
         const EXPORT_DPR = 2;
