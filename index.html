@@ -254,7 +254,9 @@
             <label for="modal-task-name" data-i18n="taskNameLabel">Tarea:</label>
             <input type="text" id="modal-task-name" data-testid="task-name-input">
 
-
+            <label for="modal-task-description" data-i18n="taskDescriptionLabel">Descripción:</label>
+            <textarea id="modal-task-description" data-testid="task-description-input" rows="5" maxlength="500"
+                placeholder="Notas para acordarte de cosas…" data-i18n-placeholder="taskDescriptionPlaceholder"></textarea>
 
             <!-- Selects ocultos para compatibilidad con JS existente -->
             <select id="modal-task-type" data-testid="task-type-select" style="display:none;">
@@ -376,7 +378,7 @@
                title="AI Agent API documentation">🤖 AI API</a>
         </span>
         <span style="flex: 1; text-align: center;">Powered by juangenovardortiz@gmail.com</span>
-        <span style="flex: 1; text-align: right;">v.3.4</span>
+        <span style="flex: 1; text-align: right;">v.3.5</span>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>

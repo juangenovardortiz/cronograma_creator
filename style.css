@@ -318,7 +318,8 @@ body {
 }
 
 .modal-content input,
-.modal-content select {
+.modal-content select,
+.modal-content textarea {
     width: 100%;
     padding: 10px;
     background-color: var(--input-bg);
@@ -327,6 +328,14 @@ body {
     border-radius: 4px;
     box-sizing: border-box;
     font-family: 'Poppins', sans-serif;
+}
+
+.modal-content textarea {
+    resize: vertical;
+    min-height: 90px;
+    line-height: 1.4;
+    font-size: 0.9em;
+    margin-bottom: 12px;
 }
 
 #task-modal .modal-row input,

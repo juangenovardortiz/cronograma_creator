@@ -85,7 +85,8 @@ const translations = {
         themeDark: "Oscuro", themeLight: "Claro", themeModern: "Moderno", themeGray: "Gris",
         addProjectBtn: "Añadir Proyecto", pasteExcelBtn: "Excel", loadBtn: "Cargar", loadBtnTitle: "Cargar Cronograma",
         pasteInstructions: "Pega aquí tu tabla desde Excel (Proyecto en Columna A, Tarea en Columna B).",
-        editTaskTitle: "Editar Tarea", taskNameLabel: "Tarea:", taskStartLabel: "Semana Inicio:",
+        editTaskTitle: "Editar Tarea", taskNameLabel: "Tarea:", taskDescriptionLabel: "Descripción:",
+        taskDescriptionPlaceholder: "Notas para acordarte de cosas…", taskStartLabel: "Semana Inicio:",
         taskDurationLabel: "Duración (semanas):", taskTypeLabel: "Tipo:",
         taskTypeNormal: "Normal", taskTypeMilestone: "Hito", taskTextPositionLabel: "Posición Texto:",
         taskTextInside: "Dentro", taskTextOutside: "Fuera", taskStyleLabel: "Estilo:",
@@ -155,7 +156,8 @@ const translations = {
         themeDark: "Dark", themeLight: "Light", themeModern: "Modern", themeGray: "Gray",
         addProjectBtn: "Add Project", pasteExcelBtn: "Excel", loadBtn: "Load", loadBtnTitle: "Load Schedule",
         pasteInstructions: "Paste your Excel table here (Project in Column A, Task in Column B).",
-        editTaskTitle: "Edit Task", taskNameLabel: "Task Name:", taskStartLabel: "Start Week:",
+        editTaskTitle: "Edit Task", taskNameLabel: "Task Name:", taskDescriptionLabel: "Description:",
+        taskDescriptionPlaceholder: "Notes to remember things…", taskStartLabel: "Start Week:",
         taskDurationLabel: "Duration (weeks):", taskTypeLabel: "Type:",
         taskTypeNormal: "Normal", taskTypeMilestone: "Milestone", taskTextPositionLabel: "Text Position:",
         taskTextInside: "Inside", taskTextOutside: "Outside", taskStyleLabel: "Style:",
@@ -1248,6 +1250,7 @@ function openTaskModal(projectIndex, rowIndex, taskIndex) {
     if (!task) return;
 
     document.getElementById('modal-task-name').value = task.name;
+    document.getElementById('modal-task-description').value = task.description || '';
     document.getElementById('modal-task-type').value = task.isMilestone ? 'milestone' : 'normal';
     document.getElementById('modal-text-position').value = task.textPosition;
     document.getElementById('modal-task-compact').checked = !!task.compact;
@@ -1291,6 +1294,17 @@ function openTaskModal(projectIndex, rowIndex, taskIndex) {
             }
         };
     });
+
+    // Textarea de descripción: Enter inserta salto de línea (no cierra el modal).
+    const descEl = document.getElementById('modal-task-description');
+    descEl.oninput = updateTaskFromModal;
+    descEl.onchange = () => { updateTaskFromModal(); saveToHistory(); };
+    descEl.onkeydown = (e) => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            closeTaskModal();
+        }
+    };
 }
 
 function updateStylePickerSelection() {
@@ -1355,9 +1369,11 @@ function updateTaskFromModal() {
     const { project, row, task: taskIndex } = editingTask;
     if (project === -1) return;
 
+    const descriptionValue = document.getElementById('modal-task-description').value.trim();
     const updatedTask = {
         ...projects[project].tasksByRow[row][taskIndex], // Mantener propiedades existentes como 'color' si no se cambia
         name: document.getElementById('modal-task-name').value.trim() || 'Tarea sin nombre',
+        description: descriptionValue || undefined,
         isMilestone: document.getElementById('modal-task-type').value === 'milestone',
         textPosition: document.getElementById('modal-text-position').value,
         compact: document.getElementById('modal-task-compact').checked,
