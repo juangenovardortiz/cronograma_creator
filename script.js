@@ -46,7 +46,7 @@ let todayColBorder = 'rgba(255, 193, 7, 0.35)';
 let todayBadgeBg = 'rgba(255, 193, 7, 0.28)';
 let todayBadgeText = '#FFC107';
 let todayWeekNumColor = '#FFD54F';
-let currentTheme = 'oscuro';
+let currentTheme = 'claro';
 const gridFont = "12px Poppins";
 const projectFont = "bold 16px Poppins";
 const taskFont = "14px Poppins";
@@ -285,6 +285,8 @@ window.addEventListener('load', () => {
     populateMonthSelectors();
     loadStateFromLocalStorage();
     loadFromShareUrl();
+    // Asegurar que el tema del selector siempre se aplique al body (incluido el caso "usuario nuevo" sin estado guardado).
+    applyTheme(document.getElementById('theme-selector').value);
     applyLanguage(langSelector.value);
 
     document.getElementById('add-project-btn').addEventListener('click', addDefaultProject);
