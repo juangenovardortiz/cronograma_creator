@@ -23,3 +23,14 @@ Never upload, push, or publish changes to Git or to the remote repository unless
 ### 6. Memory Update
 
 Every correction, learning, or new criterion that arises during the work must be saved in the `memory/` directory inside the project. Use `memory/MEMORY.md` as the index and individual files for each memory entry.
+
+### 7. Testing
+
+Every time you make a change in the code, you must test it with mcp playwright
+
+
+
+
+
+
+

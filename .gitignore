@@ -1,0 +1,20 @@
+# Variables de entorno y configuración con secretos
+.env
+.env.local
+.mcp.json
+
+# Carpetas de runtime / herramientas
+.playwright-mcp/
+.claude/
+.idea/
+.vscode/
+
+# Capturas y artefactos de pruebas locales
+*.png
+!.well-known/*.png
+sidebar-*.png
+item-height*.png
+
+# Sistema
+Thumbs.db
+.DS_Store

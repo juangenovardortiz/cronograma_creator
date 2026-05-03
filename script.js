@@ -110,7 +110,42 @@ const translations = {
         addTaskAction: "+ Añadir tarea", weekTooltipTo: " al ", acceptBtn: "Aceptar",
         todayLabel: "HOY",
         confirmChangeColor: "Esto cambiará el color de todas las tareas del proyecto. ¿Deseas continuar?",
-        shareBtn: "Compartir", shareBtnTitle: "Compartir enlace", sharePopupTitle: "Compartir enlace"
+        shareBtn: "Compartir", shareBtnTitle: "Compartir enlace", sharePopupTitle: "Compartir enlace",
+        sidebarToggleTitle: "Mostrar/Ocultar panel",
+        sidebarSignedOutHint: "Guarda tus cronogramas en la nube y accede desde cualquier dispositivo.",
+        sidebarSignedOutListHint: "Inicia sesión para ver tus cronogramas guardados.",
+        sidebarEmpty: "Aún no tienes cronogramas guardados.",
+        searchPlaceholder: "Buscar…",
+        cloudListTitle: "Mis Cronogramas",
+        cloudNewCategory: "Nueva categoría",
+        cloudUncategorized: "Sin categoría",
+        cloudPromptNewCategory: "Nombre de la nueva categoría:",
+        cloudPromptRenameCategory: "Nuevo nombre para la categoría:",
+        cloudConfirmDeleteCategory: '¿Eliminar la categoría "{0}"? Los cronogramas que contiene quedarán sin categoría.',
+        cloudRenameCategoryTitle: "Renombrar categoría",
+        cloudDeleteCategoryTitle: "Eliminar categoría",
+        cloudSignInGoogle: "Continuar con Google",
+        cloudSignOut: "Cerrar sesión",
+        cloudLoadTitle: "Cargar este cronograma",
+        cloudSyncPending: "Editando…",
+        cloudSyncSaving: "Guardando…",
+        cloudSyncSaved: "Guardado",
+        cloudSyncError: "Error al guardar",
+        cloudDeleteBtn: "Eliminar",
+        cloudMarkCompletedTitle: "Marcar como completado",
+        cloudMarkInProgressTitle: "Mover a En proceso",
+        cloudConfirmDelete: '¿Eliminar el cronograma "{0}" de la nube? Esta acción no se puede deshacer.',
+        cloudSaveOk: "Cronograma guardado en la nube.",
+        cloudUpdateOk: "Cronograma actualizado en la nube.",
+        cloudLoadOk: 'Cronograma "{0}" cargado.',
+        cloudDeleteOk: "Cronograma eliminado.",
+        cloudMarkedCompleted: "Marcado como completado.",
+        cloudMarkedInProgress: "Movido a En proceso.",
+        cloudSectionEmpty: "—",
+        cloudGenericError: "Error de conexión con la nube. Inténtalo de nuevo.",
+        cloudSignInError: "No se pudo iniciar sesión.",
+        cloudUnavailable: "El servicio en la nube no está disponible.",
+        cloudCurrentTag: "actual"
     },
     en: {
         newBtn: "New", saveBtn: "Save", copyBtn: "Image", excelBtn: "Export",
@@ -145,7 +180,42 @@ const translations = {
         addTaskAction: "+ Add task", weekTooltipTo: " to ", acceptBtn: "Accept",
         todayLabel: "TODAY",
         confirmChangeColor: "This will change the color of all tasks in the project. Do you want to continue?",
-        shareBtn: "Share", shareBtnTitle: "Share link", sharePopupTitle: "Share link"
+        shareBtn: "Share", shareBtnTitle: "Share link", sharePopupTitle: "Share link",
+        sidebarToggleTitle: "Show/Hide panel",
+        sidebarSignedOutHint: "Save your schedules in the cloud and access them from any device.",
+        sidebarSignedOutListHint: "Sign in to see your saved schedules.",
+        sidebarEmpty: "You don't have any saved schedules yet.",
+        searchPlaceholder: "Search…",
+        cloudListTitle: "My Schedules",
+        cloudNewCategory: "New category",
+        cloudUncategorized: "Uncategorized",
+        cloudPromptNewCategory: "Name of the new category:",
+        cloudPromptRenameCategory: "New name for the category:",
+        cloudConfirmDeleteCategory: 'Delete the category "{0}"? Schedules in it will become uncategorized.',
+        cloudRenameCategoryTitle: "Rename category",
+        cloudDeleteCategoryTitle: "Delete category",
+        cloudSignInGoogle: "Continue with Google",
+        cloudSignOut: "Sign out",
+        cloudLoadTitle: "Load this schedule",
+        cloudSyncPending: "Editing…",
+        cloudSyncSaving: "Saving…",
+        cloudSyncSaved: "Saved",
+        cloudSyncError: "Save error",
+        cloudDeleteBtn: "Delete",
+        cloudMarkCompletedTitle: "Mark as completed",
+        cloudMarkInProgressTitle: "Move to In progress",
+        cloudConfirmDelete: 'Delete the schedule "{0}" from the cloud? This action cannot be undone.',
+        cloudSaveOk: "Schedule saved to the cloud.",
+        cloudUpdateOk: "Schedule updated in the cloud.",
+        cloudLoadOk: 'Schedule "{0}" loaded.',
+        cloudDeleteOk: "Schedule deleted.",
+        cloudMarkedCompleted: "Marked as completed.",
+        cloudMarkedInProgress: "Moved to In progress.",
+        cloudSectionEmpty: "—",
+        cloudGenericError: "Cloud connection error. Please try again.",
+        cloudSignInError: "Could not sign in.",
+        cloudUnavailable: "The cloud service is unavailable.",
+        cloudCurrentTag: "current"
     }
 };
 
@@ -579,6 +649,17 @@ function redo() {
     }
 }
 
+// ES: Limpia el historial de undo/redo y lo deja con el estado actual como única entrada.
+// Se llama al cambiar de cronograma (cloud, archivo, share, "Nuevo") para que deshacer
+// no rebote a un cronograma distinto.
+// EN: Reset undo/redo history; called when switching schedules.
+function resetHistory() {
+    history = [];
+    historyIndex = -1;
+    saveToHistory();
+}
+window.resetHistory = resetHistory;
+
 function applyState(data) {
     if (!data) return;
 
@@ -772,7 +853,7 @@ function loadFromShareUrl() {
         }
         window.history.replaceState(null, '', location.pathname);
         updatePreview();
-        saveToHistory();
+        resetHistory();
     } catch (e) {
         console.error('Error al cargar desde URL compartida:', e);
     }
@@ -792,6 +873,9 @@ function saveStateToLocalStorage() {
     } catch (error) {
         console.error("No se pudo guardar el estado en localStorage:", error);
     }
+    // ES: Notifica al módulo de nube para autosave (si existe).
+    // EN: Notify the cloud module for autosave (if present).
+    if (typeof window.__onStateChanged === 'function') window.__onStateChanged();
 }
 
 function loadStateFromLocalStorage() {
@@ -874,7 +958,7 @@ function loadSchedule(event) {
             }
 
             updatePreview();
-            saveToHistory();
+            resetHistory();
 
         } catch (error) {
             alert(getTranslation('Error al cargar el archivo. Asegúrate de que es un archivo de cronograma válido.'));
@@ -2745,7 +2829,9 @@ async function copyChartToClipboard() {
 }
 
 function createNewSchedule() {
-    if (confirm(getTranslation('newScheduleConfirm'))) {
+    // Si hay sesión en la nube, los cambios ya están autoguardados → sin confirm.
+    const skipConfirm = !!window.__cloudIsLoggedIn;
+    if (skipConfirm || confirm(getTranslation('newScheduleConfirm'))) {
         // Limpiar proyectos
         projects.length = 0;
 
@@ -2757,7 +2843,7 @@ function createNewSchedule() {
 
         // Actualizar la vista
         updatePreview();
-        saveToHistory();
+        resetHistory();
     }
 }
 
@@ -2902,3 +2988,767 @@ function exportToExcel() {
     const filename = `${cronogramaTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.xlsx`;
     XLSX.writeFile(wb, filename);
 }
+
+// =====================================================================
+// CLOUD / AUTH (Supabase) — sidebar lateral, opcional, no afecta sin sesión.
+// EN: Optional cloud/auth sidebar. App keeps working fully without login.
+// =====================================================================
+(function setupCloud() {
+    const cfg = window.__SUPABASE_CONFIG__;
+    const sidebar = document.getElementById('cloud-sidebar');
+    if (!sidebar) return;
+
+    const sdkAvailable = typeof window.supabase !== 'undefined' && cfg && cfg.url && cfg.publishableKey;
+    let supa = null;
+    if (sdkAvailable) {
+        supa = window.supabase.createClient(cfg.url, cfg.publishableKey, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true,
+                flowType: 'pkce'
+            }
+        });
+    }
+
+    // Estado local
+    let currentCloudId = null;
+    let currentSession = null;
+    let sessionResolved = false;
+    let allRows = [];
+    let categories = []; // [{id, name, position}]
+    let searchTerm = '';
+    let lastSavedHash = null;
+    let isSaving = false;
+    let autoSaveTimer = null;
+    const AUTOSAVE_DEBOUNCE_MS = 1200;
+    const UNCATEGORIZED_KEY = '__uncategorized__';
+    const collapsed = {}; // { [categoryId|UNCATEGORIZED_KEY]: bool }
+
+    // Persistencia entre recargas para no duplicar filas en cada F5.
+    const CLOUD_LS_KEY = 'cronogramaCloudState';
+    let persistedUserId = null;
+    function persistCloudState() {
+        try {
+            localStorage.setItem(CLOUD_LS_KEY, JSON.stringify({
+                userId: currentSession?.user?.id || persistedUserId || null,
+                currentCloudId,
+                lastSavedHash
+            }));
+        } catch {}
+    }
+    function restoreCloudState() {
+        try {
+            const raw = localStorage.getItem(CLOUD_LS_KEY);
+            if (!raw) return;
+            const obj = JSON.parse(raw) || {};
+            persistedUserId = obj.userId || null;
+            currentCloudId = obj.currentCloudId || null;
+            lastSavedHash = obj.lastSavedHash || null;
+        } catch {}
+    }
+    function clearCloudState() {
+        currentCloudId = null;
+        lastSavedHash = null;
+        persistedUserId = null;
+        try { localStorage.removeItem(CLOUD_LS_KEY); } catch {}
+    }
+    restoreCloudState();
+
+    const $ = (id) => document.getElementById(id);
+    const signedOutEl = $('cloud-signed-out');
+    const signedInEl = $('cloud-signed-in');
+    const userAvatar = $('cloud-user-avatar');
+    const userAvatarFallback = $('cloud-user-avatar-fallback');
+    const userName = $('cloud-user-name');
+    const userEmail = $('cloud-user-email');
+
+    // Si la imagen de Google falla (rate-limit, 429, política), mostramos inicial
+    function showAvatarFallback(label) {
+        if (userAvatar) {
+            userAvatar.removeAttribute('src');
+            userAvatar.style.display = 'none';
+        }
+        if (userAvatarFallback) {
+            userAvatarFallback.textContent = (label || '?').trim().charAt(0).toUpperCase();
+            userAvatarFallback.style.display = 'flex';
+        }
+    }
+    userAvatar?.addEventListener('error', () => {
+        showAvatarFallback(userName?.textContent || userEmail?.textContent);
+    });
+    const feedbackEl = $('cloud-feedback');
+    const signinBtn = $('cloud-google-signin');
+    const signoutBtn = $('cloud-signout-btn');
+    const searchInput = $('cloud-search');
+    const sidebarToggle = $('cloud-sidebar-toggle');
+    const emptyState = $('sidebar-empty-state');
+    const sidebarLists = $('sidebar-lists');
+    const btnNewCategory = $('btn-new-category');
+    const syncFlashEl = $('cloud-sync-flash');
+
+    function showFeedback(msg, isError) {
+        feedbackEl.textContent = msg;
+        feedbackEl.className = 'cloud-feedback' + (isError ? ' is-error' : ' is-ok');
+        feedbackEl.style.display = 'block';
+        clearTimeout(showFeedback._t);
+        showFeedback._t = setTimeout(hideFeedback, 4000);
+    }
+    function hideFeedback() {
+        feedbackEl.style.display = 'none';
+        feedbackEl.textContent = '';
+    }
+
+    // Estados internos no visibles: pending, saving. Solo flash en "saved" / "error".
+    function setSyncStatus(state) {
+        if (!syncFlashEl) return;
+        if (state === 'saved') {
+            flashSync(getTranslation('cloudSyncSaved'), 'ok');
+        } else if (state === 'error') {
+            flashSync(getTranslation('cloudSyncError'), 'error');
+        }
+    }
+    function flashSync(text, kind) {
+        if (!syncFlashEl) return;
+        syncFlashEl.textContent = text;
+        syncFlashEl.dataset.kind = kind || 'ok';
+        // Reinicia animación: quita y reañade la clase
+        syncFlashEl.classList.remove('is-flash');
+        // Forzar reflow para reiniciar animación
+        void syncFlashEl.offsetWidth;
+        syncFlashEl.classList.add('is-flash');
+    }
+
+    function escapeHtml(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function formatDate(iso) {
+        try {
+            const d = new Date(iso);
+            const lang = document.getElementById('lang-selector')?.value || 'es';
+            return d.toLocaleString(lang === 'en' ? 'en-US' : 'es-ES', {
+                year: 'numeric', month: 'short', day: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            });
+        } catch { return iso; }
+    }
+
+    function renderSignedIn(session) {
+        currentSession = session;
+        window.__cloudIsLoggedIn = true;
+        const u = session?.user;
+        const meta = u?.user_metadata || {};
+        const name = meta.full_name || meta.name || (u?.email ? u.email.split('@')[0] : '');
+        const avatar = meta.avatar_url || meta.picture || '';
+        const email = u?.email || '';
+
+        // Si el usuario logueado no es el que persistió el currentCloudId, lo descartamos.
+        if (persistedUserId && persistedUserId !== u?.id) {
+            clearCloudState();
+        }
+        // Persistir el userId actual aunque no haya cambiado nada más
+        persistedUserId = u?.id || null;
+        persistCloudState();
+
+        signedOutEl.style.display = 'none';
+        signedInEl.style.display = 'flex';
+        userName.textContent = name;
+        userEmail.textContent = email;
+        if (avatar) {
+            userAvatar.style.display = 'block';
+            userAvatarFallback.style.display = 'none';
+            userAvatar.src = avatar;
+        } else {
+            showAvatarFallback(name || email);
+        }
+        refreshList();
+    }
+
+    function renderSignedOut() {
+        currentSession = null;
+        window.__cloudIsLoggedIn = false;
+        allRows = [];
+        clearCloudState();
+        signedOutEl.style.display = 'block';
+        signedInEl.style.display = 'none';
+        setSyncStatus('');
+        renderLists();
+    }
+
+    // Estado que se persiste en la nube. Se omiten preferencias globales del usuario
+    // (theme, lang), que pertenecen al perfil de uso, no al cronograma.
+    function getCurrentState() {
+        return {
+            title: document.getElementById('cronograma-title').value,
+            startMonth: document.getElementById('start-month').value,
+            endMonth: document.getElementById('end-month').value,
+            projects: JSON.parse(JSON.stringify(typeof projects !== 'undefined' ? projects : []))
+        };
+    }
+
+    function buildItemHtml(row) {
+        const tagCurrent = getTranslation('cloudCurrentTag');
+        const titleAttrLoad = getTranslation('cloudLoadTitle');
+        const titleAttrDel = getTranslation('cloudDeleteBtn');
+        const isCurrent = row.id === currentCloudId;
+        const cat = row.category_id || '';
+        return `
+            <div class="cron-item${isCurrent ? ' is-current' : ''}" data-id="${escapeHtml(row.id)}" data-category-id="${escapeHtml(cat)}" draggable="true">
+                <button class="cron-item-load" type="button" data-action="load" data-id="${escapeHtml(row.id)}" title="${escapeHtml(titleAttrLoad)}">
+                    <div class="cron-item-title">
+                        ${escapeHtml(row.title || '')}
+                        ${isCurrent ? `<span class="cron-current-tag">${escapeHtml(tagCurrent)}</span>` : ''}
+                    </div>
+                    <div class="cron-item-date">${escapeHtml(formatDate(row.updated_at))}</div>
+                </button>
+                <div class="cron-item-actions">
+                    <button class="cron-item-icon-btn cron-item-delete" type="button" data-action="delete" data-id="${escapeHtml(row.id)}" data-title="${escapeHtml(row.title || '')}" title="${escapeHtml(titleAttrDel)}" aria-label="${escapeHtml(titleAttrDel)}">
+                        <svg viewBox="0 0 18 18" width="14" height="14" aria-hidden="true">
+                            <path d="M4 5 H14 M6 5 V3 H12 V5 M6 8 V14 M9 8 V14 M12 8 V14 M5 5 L6 16 H12 L13 5"
+                                  stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    function buildSectionHtml(section) {
+        // section = { key, name, isUncat, count, items }
+        const isCollapsed = !!collapsed[section.key];
+        const dataKey = section.key;
+        const editable = !section.isUncat;
+        const renameTitle = getTranslation('cloudRenameCategoryTitle');
+        const deleteTitle = getTranslation('cloudDeleteCategoryTitle');
+        return `
+            <div class="sidebar-section${isCollapsed ? ' is-collapsed' : ''}${section.isUncat ? ' is-uncategorized' : ''}" data-category-key="${escapeHtml(dataKey)}">
+                <div class="sidebar-section-header-row">
+                    <button class="sidebar-section-header" type="button" data-toggle="${escapeHtml(dataKey)}" aria-expanded="${isCollapsed ? 'false' : 'true'}">
+                        <svg class="sidebar-section-caret" viewBox="0 0 12 12" width="10" height="10" aria-hidden="true">
+                            <path d="M3 4 L6 8 L9 4" stroke="currentColor" stroke-width="2"
+                                  fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="sidebar-section-label">${escapeHtml(section.name)}</span>
+                        <span class="sidebar-section-count">${section.count}</span>
+                    </button>
+                    ${editable ? `
+                        <div class="sidebar-section-actions">
+                            <button class="sidebar-section-icon-btn" type="button" data-action="rename-category" data-id="${escapeHtml(section.key)}" title="${escapeHtml(renameTitle)}" aria-label="${escapeHtml(renameTitle)}">
+                                <svg viewBox="0 0 18 18" width="13" height="13" aria-hidden="true">
+                                    <path d="M3 13 L3 15 L5 15 L13 7 L11 5 Z M11 5 L13 3 L15 5 L13 7" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                            <button class="sidebar-section-icon-btn" type="button" data-action="delete-category" data-id="${escapeHtml(section.key)}" data-name="${escapeHtml(section.name)}" title="${escapeHtml(deleteTitle)}" aria-label="${escapeHtml(deleteTitle)}">
+                                <svg viewBox="0 0 18 18" width="13" height="13" aria-hidden="true">
+                                    <path d="M4 5 H14 M6 5 V3 H12 V5 M6 8 V14 M9 8 V14 M12 8 V14 M5 5 L6 16 H12 L13 5"
+                                          stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>` : ''}
+                </div>
+                <div class="sidebar-section-list" data-category-list="${escapeHtml(dataKey)}">
+                    ${section.items.length
+                        ? section.items.map(buildItemHtml).join('')
+                        : `<div class="cron-empty-row">${escapeHtml(getTranslation('cloudSectionEmpty'))}</div>`}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderLists() {
+        const term = (searchTerm || '').trim().toLowerCase();
+        const sortedRows = allRows.slice().sort((a, b) => (a.position || 0) - (b.position || 0));
+        const filteredRows = term
+            ? sortedRows.filter(r => (r.title || '').toLowerCase().includes(term))
+            : sortedRows;
+
+        const sortedCats = categories.slice().sort((a, b) => (a.position || 0) - (b.position || 0));
+        const sections = [];
+        for (const cat of sortedCats) {
+            const items = filteredRows.filter(r => r.category_id === cat.id);
+            sections.push({
+                key: cat.id,
+                name: cat.name,
+                isUncat: false,
+                count: items.length,
+                items
+            });
+        }
+        const uncatItems = filteredRows.filter(r => !r.category_id);
+        // Solo mostrar "Sin categoría" si tiene items (para no contaminar la UI)
+        if (uncatItems.length > 0 || categories.length === 0) {
+            sections.push({
+                key: UNCATEGORIZED_KEY,
+                name: getTranslation('cloudUncategorized'),
+                isUncat: true,
+                count: uncatItems.length,
+                items: uncatItems
+            });
+        }
+
+        // Render: dejamos el empty-state al inicio y luego pintamos las secciones
+        const emptyHtml = emptyState.outerHTML;
+        sidebarLists.innerHTML = emptyHtml + sections.map(buildSectionHtml).join('');
+
+        // Estado vacío
+        const empty = $('sidebar-empty-state');
+        if (!currentSession) {
+            empty.style.display = 'block';
+            empty.querySelector('span').textContent = getTranslation('sidebarSignedOutListHint');
+        } else if (allRows.length === 0 && categories.length === 0) {
+            empty.style.display = 'block';
+            empty.querySelector('span').textContent = getTranslation('sidebarEmpty');
+        } else {
+            empty.style.display = 'none';
+        }
+    }
+
+    async function refreshList() {
+        if (!supa || !currentSession) return;
+        const [rowsRes, catsRes] = await Promise.all([
+            supa.from('cronogramas')
+                .select('id, title, updated_at, created_at, position, category_id')
+                .order('position', { ascending: true })
+                .order('updated_at', { ascending: false }),
+            supa.from('categories')
+                .select('id, name, position')
+                .order('position', { ascending: true })
+                .order('created_at', { ascending: true })
+        ]);
+
+        if (rowsRes.error) {
+            console.error('[cloud] list error:', rowsRes.error);
+            showFeedback(getTranslation('cloudGenericError'), true);
+            return;
+        }
+        if (catsRes.error) {
+            console.error('[cloud] categories error:', catsRes.error);
+        }
+        allRows = rowsRes.data || [];
+        categories = catsRes.data || [];
+        if (currentCloudId && !allRows.some(r => r.id === currentCloudId)) {
+            currentCloudId = null;
+            lastSavedHash = null;
+            persistCloudState();
+        }
+        renderLists();
+    }
+
+    async function createCategory() {
+        if (!supa || !currentSession) return;
+        const name = (prompt(getTranslation('cloudPromptNewCategory')) || '').trim();
+        if (!name) return;
+        const maxPos = categories.reduce((m, c) => Math.max(m, c.position || 0), 0);
+        try {
+            const { data, error } = await supa
+                .from('categories')
+                .insert({ user_id: currentSession.user.id, name, position: maxPos + 1 })
+                .select('id, name, position')
+                .single();
+            if (error) throw error;
+            categories.push(data);
+            renderLists();
+        } catch (err) {
+            console.error('[cloud] create category error:', err);
+            setSyncStatus('error');
+        }
+    }
+
+    async function renameCategory(id) {
+        if (!supa || !currentSession) return;
+        const cat = categories.find(c => c.id === id);
+        if (!cat) return;
+        const name = (prompt(getTranslation('cloudPromptRenameCategory'), cat.name) || '').trim();
+        if (!name || name === cat.name) return;
+        const prev = cat.name;
+        cat.name = name;
+        renderLists();
+        try {
+            const { error } = await supa
+                .from('categories')
+                .update({ name })
+                .eq('id', id);
+            if (error) throw error;
+        } catch (err) {
+            console.error('[cloud] rename category error:', err);
+            cat.name = prev;
+            renderLists();
+            setSyncStatus('error');
+        }
+    }
+
+    async function deleteCategory(id, name) {
+        if (!supa || !currentSession) return;
+        const msg = getTranslation('cloudConfirmDeleteCategory').replace('{0}', name || '');
+        if (!confirm(msg)) return;
+        try {
+            const { error } = await supa.from('categories').delete().eq('id', id);
+            if (error) throw error;
+            // Los cronogramas pasan a category_id = null por la FK on delete set null
+            categories = categories.filter(c => c.id !== id);
+            allRows.forEach(r => { if (r.category_id === id) r.category_id = null; });
+            renderLists();
+        } catch (err) {
+            console.error('[cloud] delete category error:', err);
+            setSyncStatus('error');
+        }
+    }
+
+    function scheduleAutoSave() {
+        if (!supa || !currentSession || !sessionResolved) return;
+        setSyncStatus('pending');
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(doAutoSave, AUTOSAVE_DEBOUNCE_MS);
+    }
+
+    async function doAutoSave() {
+        if (!supa || !currentSession) return;
+        if (isSaving) {
+            // Reintenta tras la operación en curso
+            autoSaveTimer = setTimeout(doAutoSave, 500);
+            return;
+        }
+        const state = getCurrentState();
+        const title = state.title || 'Mi Cronograma';
+        const hash = JSON.stringify({ title, state });
+        if (hash === lastSavedHash) {
+            setSyncStatus('saved');
+            return;
+        }
+        isSaving = true;
+        setSyncStatus('saving');
+        try {
+            if (currentCloudId) {
+                const { error } = await supa
+                    .from('cronogramas')
+                    .update({ title, state })
+                    .eq('id', currentCloudId);
+                if (error) throw error;
+            } else {
+                const { data, error } = await supa
+                    .from('cronogramas')
+                    .insert({ user_id: currentSession.user.id, title, state, completed: false })
+                    .select('id')
+                    .single();
+                if (error) throw error;
+                currentCloudId = data.id;
+            }
+            lastSavedHash = hash;
+            persistCloudState();
+            setSyncStatus('saved');
+            refreshList();
+        } catch (err) {
+            console.error('[cloud] autosave error:', err);
+            setSyncStatus('error');
+        } finally {
+            isSaving = false;
+        }
+    }
+
+    async function loadFromCloud(id) {
+        if (!supa || !currentSession) return;
+        try {
+            const { data, error } = await supa
+                .from('cronogramas')
+                .select('id, title, state')
+                .eq('id', id)
+                .single();
+            if (error) throw error;
+            const stateObj = data.state || {};
+            if (data.title && !stateObj.title) stateObj.title = data.title;
+            // Las preferencias globales no se restauran desde el cronograma
+            delete stateObj.theme;
+            delete stateObj.lang;
+
+            // Marcamos como "ya guardado" para que no dispare un autosave redundante
+            currentCloudId = data.id;
+            const titleForSave = data.title || stateObj.title || 'Mi Cronograma';
+            const stateForSave = {
+                title: titleForSave,
+                startMonth: String(stateObj.startMonth ?? ''),
+                endMonth: String(stateObj.endMonth ?? ''),
+                projects: stateObj.projects || []
+            };
+            lastSavedHash = JSON.stringify({ title: titleForSave, state: stateForSave });
+            persistCloudState();
+
+            applyState(stateObj);
+            resetHistory();
+            renderLists();
+        } catch (err) {
+            console.error('[cloud] load error:', err);
+            setSyncStatus('error');
+        }
+    }
+
+    async function deleteFromCloud(id, title) {
+        if (!supa || !currentSession) return;
+        const msg = getTranslation('cloudConfirmDelete').replace('{0}', title || '');
+        if (!confirm(msg)) return;
+        try {
+            const { error } = await supa.from('cronogramas').delete().eq('id', id);
+            if (error) throw error;
+            if (currentCloudId === id) {
+                currentCloudId = null;
+                lastSavedHash = null;
+                persistCloudState();
+                setSyncStatus('');
+            }
+            allRows = allRows.filter(r => r.id !== id);
+            renderLists();
+            showFeedback(getTranslation('cloudDeleteOk'));
+        } catch (err) {
+            console.error('[cloud] delete error:', err);
+            showFeedback(getTranslation('cloudGenericError'), true);
+        }
+    }
+
+    async function signInWithGoogle() {
+        if (!supa) {
+            showFeedback(getTranslation('cloudUnavailable'), true);
+            return;
+        }
+        try {
+            const { error } = await supa.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo: window.location.origin + window.location.pathname }
+            });
+            if (error) throw error;
+        } catch (err) {
+            console.error('[cloud] signin error:', err);
+            showFeedback(getTranslation('cloudSignInError'), true);
+        }
+    }
+
+    async function signOut() {
+        if (!supa) return;
+        await supa.auth.signOut();
+        renderSignedOut();
+    }
+
+    // --- Listeners ---
+    signinBtn?.addEventListener('click', signInWithGoogle);
+    signoutBtn?.addEventListener('click', signOut);
+
+    searchInput?.addEventListener('input', (e) => {
+        searchTerm = e.target.value;
+        renderLists();
+    });
+
+    // Hook: cualquier cambio en el estado dispara autosave (saveStateToLocalStorage lo invoca)
+    window.__onStateChanged = scheduleAutoSave;
+
+    // Hook: pulsar "Nuevo" → resetear currentCloudId para que el próximo autosave cree entrada nueva
+    if (typeof window.createNewSchedule === 'function') {
+        const origCreateNew = window.createNewSchedule;
+        window.createNewSchedule = function () {
+            const before = (typeof projects !== 'undefined') ? projects.length : -1;
+            const r = origCreateNew.apply(this, arguments);
+            const after = (typeof projects !== 'undefined') ? projects.length : -1;
+            // Si realmente se creó uno nuevo (proyectos quedaron vacíos)
+            if (after === 0 && before !== 0) {
+                currentCloudId = null;
+                lastSavedHash = null;
+                persistCloudState();
+                setSyncStatus('');
+                renderLists();
+            }
+            return r;
+        };
+    }
+
+    // Hook: cargar JSON desde archivo → resetear (creará entrada nueva en la nube)
+    if (typeof window.loadSchedule === 'function') {
+        const origLoadSchedule = window.loadSchedule;
+        window.loadSchedule = function (event) {
+            const fileChosen = !!(event?.target?.files && event.target.files[0]);
+            if (fileChosen) {
+                currentCloudId = null;
+                lastSavedHash = null;
+                persistCloudState();
+                setSyncStatus('');
+            }
+            return origLoadSchedule.apply(this, arguments);
+        };
+    }
+
+    // Toggle plegado de secciones + acciones de items y categorías
+    sidebar.addEventListener('click', (e) => {
+        // Acción de botón (con data-action) tiene prioridad sobre el toggle de la cabecera
+        const btn = e.target.closest('button[data-action]');
+        if (btn) {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            const action = btn.dataset.action;
+            if (action === 'load') loadFromCloud(id);
+            else if (action === 'delete') deleteFromCloud(id, btn.dataset.title || '');
+            else if (action === 'rename-category') renameCategory(id);
+            else if (action === 'delete-category') deleteCategory(id, btn.dataset.name || '');
+            return;
+        }
+        const header = e.target.closest('.sidebar-section-header');
+        if (header) {
+            const key = header.dataset.toggle;
+            collapsed[key] = !collapsed[key];
+            const section = header.closest('.sidebar-section');
+            section.classList.toggle('is-collapsed', collapsed[key]);
+            header.setAttribute('aria-expanded', String(!collapsed[key]));
+        }
+    });
+
+    btnNewCategory?.addEventListener('click', createCategory);
+
+    // Plegar/desplegar el sidebar entero
+    sidebarToggle?.addEventListener('click', () => {
+        document.body.classList.toggle('sidebar-collapsed');
+    });
+
+    // --- Drag & Drop: reordenar dentro de la sección y mover entre secciones ---
+    let draggingId = null;
+
+    function clearDropMarkers() {
+        sidebar.querySelectorAll('.cron-item.is-drop-before, .cron-item.is-drop-after')
+            .forEach(el => el.classList.remove('is-drop-before', 'is-drop-after'));
+        sidebar.querySelectorAll('.sidebar-section.is-drop-target')
+            .forEach(el => el.classList.remove('is-drop-target'));
+    }
+
+    // Mueve un cronograma a otra categoría y/o reordena dentro de su sección.
+    // targetCategoryId: uuid de la categoría, o null para "Sin categoría".
+    async function moveItem(id, targetCategoryId, targetIndexInSection) {
+        if (!supa || !currentSession) return;
+        const moved = allRows.find(r => r.id === id);
+        if (!moved) return;
+
+        const prev = { category_id: moved.category_id, position: moved.position };
+
+        const sectionRows = allRows
+            .filter(r => r.id !== id && (r.category_id || null) === (targetCategoryId || null))
+            .sort((a, b) => (a.position || 0) - (b.position || 0));
+
+        const idx = Math.max(0, Math.min(targetIndexInSection, sectionRows.length));
+        sectionRows.splice(idx, 0, moved);
+
+        moved.category_id = targetCategoryId || null;
+        sectionRows.forEach((row, i) => { row.position = i + 1; });
+
+        renderLists();
+
+        try {
+            const updates = sectionRows.map(row => {
+                const payload = { position: row.position };
+                if (row.id === id && prev.category_id !== (targetCategoryId || null)) {
+                    payload.category_id = targetCategoryId || null;
+                }
+                return supa.from('cronogramas').update(payload).eq('id', row.id);
+            });
+            const results = await Promise.all(updates);
+            const firstErr = results.find(r => r.error);
+            if (firstErr) throw firstErr.error;
+        } catch (err) {
+            console.error('[cloud] reorder/move error:', err);
+            moved.category_id = prev.category_id;
+            moved.position = prev.position;
+            setSyncStatus('error');
+            refreshList();
+        }
+    }
+
+    sidebar.addEventListener('dragstart', (e) => {
+        const item = e.target.closest('.cron-item');
+        if (!item) return;
+        draggingId = item.dataset.id;
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', draggingId); } catch {}
+        requestAnimationFrame(() => item.classList.add('is-dragging'));
+    });
+
+    sidebar.addEventListener('dragend', () => {
+        draggingId = null;
+        sidebar.querySelectorAll('.cron-item.is-dragging')
+            .forEach(el => el.classList.remove('is-dragging'));
+        clearDropMarkers();
+    });
+
+    sidebarLists.addEventListener('dragover', (e) => {
+        if (!draggingId) return;
+        const list = e.target.closest('[data-category-list]');
+        if (!list) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+
+        const section = list.closest('.sidebar-section');
+        if (section.classList.contains('is-collapsed')) {
+            const key = section.dataset.categoryKey;
+            collapsed[key] = false;
+            section.classList.remove('is-collapsed');
+            section.querySelector('.sidebar-section-header')
+                ?.setAttribute('aria-expanded', 'true');
+        }
+
+        clearDropMarkers();
+
+        const items = [...list.querySelectorAll('.cron-item:not(.is-dragging)')];
+        if (items.length === 0) {
+            section.classList.add('is-drop-target');
+            return;
+        }
+        let placed = false;
+        for (const it of items) {
+            const rect = it.getBoundingClientRect();
+            const mid = rect.top + rect.height / 2;
+            if (e.clientY < mid) {
+                it.classList.add('is-drop-before');
+                placed = true;
+                break;
+            }
+        }
+        if (!placed) items[items.length - 1].classList.add('is-drop-after');
+    });
+
+    sidebarLists.addEventListener('dragleave', (e) => {
+        const list = e.target.closest('[data-category-list]');
+        if (list && !list.contains(e.relatedTarget)) {
+            clearDropMarkers();
+        }
+    });
+
+    sidebarLists.addEventListener('drop', (e) => {
+        if (!draggingId) return;
+        const list = e.target.closest('[data-category-list]');
+        if (!list) return;
+        e.preventDefault();
+        const id = draggingId || e.dataTransfer.getData('text/plain');
+        if (!id) { clearDropMarkers(); return; }
+
+        const key = list.dataset.categoryList;
+        const targetCategoryId = key === UNCATEGORIZED_KEY ? null : key;
+
+        const items = [...list.querySelectorAll('.cron-item:not(.is-dragging)')];
+        let targetIdx = items.length;
+        const before = list.querySelector('.cron-item.is-drop-before');
+        if (before) targetIdx = items.indexOf(before);
+
+        clearDropMarkers();
+        moveItem(id, targetCategoryId, targetIdx);
+    });
+
+    if (sdkAvailable) {
+        supa.auth.getSession().then(({ data }) => {
+            if (data?.session) renderSignedIn(data.session);
+            else renderSignedOut();
+            sessionResolved = true;
+        });
+        supa.auth.onAuthStateChange((_event, session) => {
+            if (session) renderSignedIn(session);
+            else renderSignedOut();
+            sessionResolved = true;
+        });
+    } else {
+        renderSignedOut();
+        sessionResolved = true;
+    }
+})();
