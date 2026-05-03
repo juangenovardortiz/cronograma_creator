@@ -1075,6 +1075,17 @@ function processPastedData(text) {
 }
 
 // --- MANEJO DE TAREAS ---
+// Devuelve true si todas las tareas existentes del proyecto son compactas
+// (criterio que el modal del proyecto usa para considerar el proyecto compacto)
+// Returns true if every existing task in the project is compact
+// (matches the project-modal criterion for "project is compact")
+function isProjectCompact(projectIndex) {
+    const project = projects[projectIndex];
+    if (!project) return false;
+    const allTasks = project.tasksByRow.flat();
+    return allTasks.length > 0 && allTasks.every(t => !!t.compact);
+}
+
 function addTask(projectIndex, rowIndex) {
     const newWeek = Math.max(1, Math.floor(totalWeeks / 4));
 
@@ -1083,7 +1094,8 @@ function addTask(projectIndex, rowIndex) {
         startWeek: newWeek,
         duration: 4,
         isMilestone: false,
-        textPosition: 'outside'
+        textPosition: 'outside',
+        compact: isProjectCompact(projectIndex)
     };
 
     const targetRow = projects[projectIndex].tasksByRow[rowIndex];
@@ -2475,7 +2487,9 @@ function addSimpleTask(projectIndex) {
         startWeek: Math.min(Math.ceil(latestEndWeek), totalWeeks), // No pasar de la última semana visible
         duration: 1, // Duración por defecto
         type: 'normal',
-        textPosition: 'inside'
+        isMilestone: false,
+        textPosition: 'outside',
+        compact: isProjectCompact(projectIndex)
     };
 
     // Añadir la tarea a la primera fila libre o a una nueva
